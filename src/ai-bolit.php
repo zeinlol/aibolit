@@ -1,5 +1,6 @@
 <?php
 ///////////////////////////////////////////////////////////////////////////
+// Updated by Nick Borshchov
 // Created and developed by Greg Zemskov, Revisium Company
 // Email: ai@revisium.com, http://revisium.com/ai/, skype: greg_zemskov
 
@@ -10,14 +11,6 @@
 // http://revisium.com/ai/i/mini_aibolit.jpg
 
 ////////////////////////////////////////////////////////////////////////////
-// Запрещено использование скрипта в коммерческих целях без приобретения лицензии.
-// Запрещено использование исходного кода скрипта и сигнатур.
-//
-// По вопросам приобретения лицензии обращайтесь в компанию "Ревизиум": http://www.revisium.com
-// ai@revisium.com
-// На скрипт получено авторское свидетельство в Роспатенте
-// http://revisium.com/ai/i/mini_aibolit.jpg
-///////////////////////////////////////////////////////////////////////////
 ini_set('memory_limit', '1G');
 //@mb_internal_encoding('');
 
@@ -33,8 +26,8 @@ define('AI_EXPERT_MODE', 2);
 // Впишите вместо put_any_strong_password_here сложный пароль	 
 define('PASS', '????????????????????'); 
 
-//define('LANG', 'EN');
-define('LANG', 'RU');
+define('LANG', 'EN');
+// define('LANG', 'RU');
 
 define('REPORT_MASK_PHPSIGN', 1);
 define('REPORT_MASK_SPAMLINKS', 2);
@@ -184,8 +177,8 @@ $tmp_str = <<<HTML_FOOTER
    </div>
    <div class="thanx">
       Замечания и предложения по работе скрипта, а также не обнаруженные вредоносные скрипты вы можете присылать на <a href="mailto:ai@revisium.com">ai@revisium.com</a>.<br/>
-      Также будем чрезвычайно благодарны за любые упоминания сканера AI-Bolit на вашем сайте, в блоге, среди друзей, знакомых и клиентов. <br/>Ссылку можно поставить на страницу <a href="https://revisium.com/ai/">https://revisium.com/ai/</a>.<br/> 
-     <p>Получить консультацию или задать вопросы можно по email <a href="mailto:ai@revisium.com">ai@revisium.com</a>.</p> 
+      Также будем чрезвычайно благодарны за любые упоминания сканера AI-Bolit на вашем сайте, в блоге, среди друзей, знакомых и клиентов. <br/>Ссылку можно поставить на страницу <a href="https://revisium.com/ai/">https://revisium.com/ai/</a>.<br/>
+     <p>Получить консультацию или задать вопросы можно по email <a href="mailto:ai@revisium.com">ai@revisium.com</a>.</p>
 	</div>
 HTML_FOOTER;
 
@@ -204,7 +197,7 @@ define('AI_STR_087', "Изменения в файловой структуре"
 
 $l_Offer =<<<OFFER
     <div>
-	 <div class="crit" style="font-size: 17px;"><b>Внимание! Наш сканер обнаружил подозрительный или вредоносный код</b>.</div> 
+	 <div class="crit" style="font-size: 17px;"><b>Внимание! Наш сканер обнаружил подозрительный или вредоносный код</b>.</div>
 	 <br/>Скорее всего, ваш сайт был взломан и заражен. Рекомендуем срочно <a href="https://revisium.com/ru/order/" target=_blank>обратиться за консультацией</a> к специалистам по информационной безопасности.
 	</div>
 	<br/>
@@ -215,7 +208,7 @@ $l_Offer =<<<OFFER
 	   Также проверьте сайт новым <b><a href="http://rescan.pro/" target=_blank>веб-сканером REVIZORRO</a></b>.
 	</div>
 	<br/>
-	
+
     <div class="caution">@@CAUTION@@</div>
 OFFER;
 
@@ -310,11 +303,11 @@ define('AI_STR_074', 'Summary');
 define('AI_STR_075', 'For non-commercial use only. Please, purchase the license for commercial usage of the scanner. Email us: ai@revisium.com');
 
 $tmp_str =<<<HTML_FOOTER
-		   <div class="disclaimer"><span class="vir">[!]</span> Disclaimer: We're not liable to you for any damages, including general, special, incidental or consequential damages arising out of the use or inability to use the script (including but not limited to loss of data or report being rendered inaccurate or failure of the script). There's no warranty for the program. Use at your own risk. 
+		   <div class="disclaimer"><span class="vir">[!]</span> Disclaimer: We're not liable to you for any damages, including general, special, incidental or consequential damages arising out of the use or inability to use the script (including but not limited to loss of data or report being rendered inaccurate or failure of the script). There's no warranty for the program. Use at your own risk.
 		   </div>
 		   <div class="thanx">
-		      We're greatly appreciate for any references in the social networks, forums or blogs to our scanner AI-BOLIT <a href="https://revisium.com/aibo/">https://revisium.com/aibo/</a>.<br/> 
-		     <p>Write us if you have any questions regarding scannner usage or report <a href="mailto:ai@revisium.com">ai@revisium.com</a>.</p> 
+		      We're greatly appreciate for any references in the social networks, forums or blogs to our scanner AI-BOLIT <a href="https://revisium.com/aibo/">https://revisium.com/aibo/</a>.<br/>
+		     <p>Write us if you have any questions regarding scannner usage or report <a href="mailto:ai@revisium.com">ai@revisium.com</a>.</p>
 			</div>
 HTML_FOOTER;
 define('AI_STR_076', $tmp_str);
@@ -331,7 +324,7 @@ define('AI_STR_087', "Integrity Check Report");
 
 $l_Offer =<<<HTML_OFFER_EN
 <div>
- <div class="crit" style="font-size: 17px;"><b>Danger! Malicious or suspicious files have been detected on the website.</b></div> 
+ <div class="crit" style="font-size: 17px;"><b>Danger! Malicious or suspicious files have been detected on the website.</b></div>
  <br/>Most likely the website has been compromised. Please, <a href="https://revisium.com/en/home/" target=_blank>contact security experts</a> or experienced webmaster immediately to clean up the website from malware.
 </div>
 <br/>
@@ -1561,7 +1554,8 @@ if (isCli())
 		'with-2check',
 		'skip-cache',
 		'imake',
-		'icheck'
+		'icheck',
+		'lang'
 	);
 	$cli_longopts = array_merge($cli_longopts, array_values($cli_options));
 
@@ -1600,6 +1594,7 @@ Current default path is: {$defaults['path']}
       --imake
       --icheck
       --idb=file	   Integrity Check database file
+      --lang           Choose lang for output. RU for Russian, EN for English. Default is English
 
       --help           Display this help and exit
 
@@ -1610,7 +1605,18 @@ HELP;
 	}
 
 	$l_FastCli = false;
-	
+	if (isset($options['lang'])) {
+	    if ($lang == 'RU') {
+	        define('LANG', 'RU');
+	    }
+	    else {
+	        define('LANG', 'EN');
+	    }
+	}
+	else {
+        define('LANG', 'EN');
+	}
+	echo LANG;
 	if (
 		(isset($options['memory']) AND !empty($options['memory']) AND ($memory = $options['memory']))
 		OR (isset($options['m']) AND !empty($options['m']) AND ($memory = $options['m']))
