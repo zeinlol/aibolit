@@ -1,0 +1,5 @@
+<?php
+const MAX_ALLOWED_PHP_HTML_IN_DIR = 600;
+//const BASE64_LENGTH = 69;
+const MAX_PREVIEW_LEN = 80;
+const MAX_EXT_LINKS = 1001;
