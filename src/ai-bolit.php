@@ -1,5 +1,5 @@
 <?php
-///////////////////////////////////////////////////////////////////////////
+
 // Updated by Nick Borshchov
 // Created and developed by Greg Zemskov, Revisium Company
 // Email: ai@revisium.com, http://revisium.com/ai/, skype: greg_zemskov
@@ -10,66 +10,88 @@
 // Certificated in Federal Institute of Industrial Property in 2012
 // http://revisium.com/ai/i/mini_aibolit.jpg
 
-////////////////////////////////////////////////////////////////////////////
+////
 ini_set('memory_limit', '1G');
 //@mb_internal_encoding('');
 
 $int_enc = @ini_get('mbstring.internal_encoding');
-        
-define('SHORT_PHP_TAG', strtolower(ini_get('short_open_tag')) == 'on' || strtolower(ini_get('short_open_tag')) == 1 ? true : false);
+
+define('SHORT_PHP_TAG', strtolower(ini_get('short_open_tag')) == 'on' || strtolower(ini_get('short_open_tag')) == 1);
 
 // put 1 for expert mode, 0 for basic check and 2 for paranoic mode
-// установите 1 для режима "Эксперта", 0 для быстрой проверки и 2 для параноидальной проверки (для лечения сайта) 
-define('AI_EXPERT_MODE', 2); 
+// установите 1 для режима "Эксперта", 0 для быстрой проверки и 2 для параноидальной проверки (для лечения сайта)
+const AI_EXPERT_MODE = 2;
 
 // Put any strong password to open the script from web
-// Впишите вместо put_any_strong_password_here сложный пароль	 
-define('PASS', '????????????????????'); 
-
-define('LANG', 'EN');
+// Впишите вместо put_any_strong_password_here сложный пароль
+const PASS = '????????????????????';
+$LANG = 'EN';
 // define('LANG', 'RU');
+const REPORT_MASK_PHPSIGN = 1;
+const REPORT_MASK_SPAMLINKS = 2;
+const REPORT_MASK_DOORWAYS = 4;
+const REPORT_MASK_SUSP = 8;
+//const REPORT_MASK_CANDI = 16;
+//const REPORT_MASK_WRIT = 32;
+const REPORT_MASK_FULL = REPORT_MASK_PHPSIGN | REPORT_MASK_DOORWAYS | REPORT_MASK_SUSP;
+/* <-- remove this line to enable "recommendations"
+| REPORT_MASK_SPAMLINKS
+ */
+const SMART_SCAN = 0;
+const AI_EXTRA_WARN = 0;
+const QUARANTINE_CREATE_SORTED = 0;
 
-define('REPORT_MASK_PHPSIGN', 1);
-define('REPORT_MASK_SPAMLINKS', 2);
-define('REPORT_MASK_DOORWAYS', 4);
-define('REPORT_MASK_SUSP', 8);
-define('REPORT_MASK_CANDI', 16);
-define('REPORT_MASK_WRIT', 32);
-define('REPORT_MASK_FULL', REPORT_MASK_PHPSIGN | REPORT_MASK_DOORWAYS | REPORT_MASK_SUSP
-/* <-- remove this line to enable "recommendations"  
-
-| REPORT_MASK_SPAMLINKS 
-
- remove this line to enable "recommendations" --> */
-);
-
-define('SMART_SCAN', 0);
-
-define('AI_EXTRA_WARN', 0);
-
-define('QUARANTINE_CREATE_SORTED', 0);
+// fix undefined variables
+$BOOL_RESULT = true;
+$g_CriticalPHPFragment = [];
+$g_PhishingSigFragment = [];
+$g_RedirectPHPFragment = [];
+$g_WarningPHPFragment = [];
+$g_AdwareListFragment = [];
+$g_CriticalJSFragment = [];
+$g_PhishingFragment = [];
+$g_IframerFragment = [];
+$g_Base64Fragment = [];
+$g_CriticalPHPSig = [];
+$g_WarningPHPSig = [];
+$g_CriticalJSSig = [];
+$g_EmptyLinkSrc = [];
+$g_EmptyLinkSrc = [];
+$g_CriticalPHP = [];
+$g_AdwareList = [];
+$g_WarningPHP = [];
+$g_IgnoredExt = [];
+$g_EmptyLink = [];
+$g_BigFiles = [];
+$g_Redirect = [];
+$g_Doorway = [];
+$l_FastCli = false;
+$g_SkipNextCheck = false;
+$l_TSStartScan = microtime(true);
+$l_Unwrapped = '';
+$g_AddPrefix = '';
+$g_NoPrefix = '';
+$report = '';
+// end of undefined variables
 
 $defaults = array(
-	'path' => dirname(__FILE__),
-	'scan_all_files' => 0, // full scan (rather than just a .js, .php, .html, .htaccess)
-	'scan_delay' => 0, // delay in file scanning to reduce system load
-	'max_size_to_scan' => '600K',
-	'site_url' => '', // website url
-	'no_rw_dir' => 0,
-    	'skip_ext' => '',
-        'skip_cache' => false,
-	'report_mask' => REPORT_MASK_FULL
+    'path' => dirname(__FILE__),
+    'scan_all_files' => 0, // full scan (rather than just a .js, .php, .html, .htaccess)
+    'scan_delay' => 0, // delay in file scanning to reduce system load
+    'max_size_to_scan' => '600K',
+    'site_url' => '', // website url
+    'no_rw_dir' => 0,
+    'skip_ext' => '',
+    'skip_cache' => false,
+    'report_mask' => REPORT_MASK_FULL
 );
 
-
-define('DEBUG_MODE', 0);
-
-define('DIR_SEPARATOR', '/');
-
-define('DOUBLECHECK_FILE', 'AI-BOLIT-DOUBLECHECK.php');
+const DEBUG_MODE = 0;
+$DIR_SEPARATOR = '/';
+const DOUBLECHECK_FILE = 'AI-BOLIT-DOUBLECHECK.php';
 
 if ((isset($_SERVER['OS']) && stripos('Win', $_SERVER['OS']) !== false)/* && stripos('CygWin', $_SERVER['OS']) === false)*/) {
-   define('DIR_SEPARATOR', '\\');
+    define('DIR_SEPARATOR', '\\');
 }
 
 $g_SuspiciousFiles = array('cgi', 'pl', 'o', 'so', 'py', 'sh', 'phtml', 'php3', 'php4', 'php5', 'php6', 'php7', 'pht', 'shtml', 'susp', 'suspected');
@@ -83,96 +105,94 @@ $g_PhishEntries = '<\s*title|<\s*html|<\s*form|<\s*body|bank|account';
 $g_ShortListExt = array('php', 'php3', 'php4', 'php5', 'php6', 'php7', 'pht', 'html', 'htm', 'phtml', 'shtml', 'khtml');
 
 if (LANG == 'RU') {
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // RUSSIAN INTERFACE
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-$msg1 = "\"Отображать по _MENU_ записей\"";
-$msg2 = "\"Ничего не найдено\"";
-$msg3 = "\"Отображается c _START_ по _END_ из _TOTAL_ файлов\"";
-$msg4 = "\"Нет файлов\"";
-$msg5 = "\"(всего записей _MAX_)\"";
-$msg6 = "\"Поиск:\"";
-$msg7 = "\"Первая\"";
-$msg8 = "\"Предыдущая\"";
-$msg9 = "\"Следующая\"";
-$msg10 = "\"Последняя\"";
-$msg11 = "\": активировать для сортировки столбца по возрастанию\"";
-$msg12 = "\": активировать для сортировки столбцов по убыванию\"";
+    $msg1 = "\"Отображать по _MENU_ записей\"";
+    $msg2 = "\"Ничего не найдено\"";
+    $msg3 = "\"Отображается c _START_ по _END_ из _TOTAL_ файлов\"";
+    $msg4 = "\"Нет файлов\"";
+    $msg5 = "\"(всего записей _MAX_)\"";
+    $msg6 = "\"Поиск:\"";
+    $msg7 = "\"Первая\"";
+    $msg8 = "\"Предыдущая\"";
+    $msg9 = "\"Следующая\"";
+    $msg10 = "\"Последняя\"";
+    $msg11 = "\": активировать для сортировки столбца по возрастанию\"";
+    $msg12 = "\": активировать для сортировки столбцов по убыванию\"";
 
-define('AI_STR_001', 'Отчет сканера <a href="https://revisium.com/ai/">AI-Bolit</a> v@@VERSION@@:');
-define('AI_STR_002', 'Обращаем внимание на то, что большинство CMS <b>без дополнительной защиты</b> рано или поздно <b>взламывают</b>.<p> Компания <a href="https://revisium.com/">"Ревизиум"</a> предлагает услугу превентивной защиты сайта от взлома с использованием уникальной <b>процедуры "цементирования сайта"</b>. Подробно на <a href="https://revisium.com/ru/client_protect/">странице услуги</a>. <p>Лучшее лечение &mdash; это профилактика.');
-define('AI_STR_003', 'Не оставляйте файл отчета на сервере, и не давайте на него прямых ссылок с других сайтов. Информация из отчета может быть использована злоумышленниками для взлома сайта, так как содержит информацию о настройках сервера, файлах и каталогах.');
-define('AI_STR_004', 'Путь');
-define('AI_STR_005', 'Изменение свойств');
-define('AI_STR_006', 'Изменение содержимого');
-define('AI_STR_007', 'Размер');
-define('AI_STR_008', 'Конфигурация PHP');
-define('AI_STR_009', "Вы установили слабый пароль на скрипт AI-BOLIT. Укажите пароль не менее 8 символов, содержащий латинские буквы в верхнем и нижнем регистре, а также цифры. Например, такой <b>%s</b>");
-define('AI_STR_010', "Сканер AI-Bolit запускается с паролем. Если это первый запуск сканера, вам нужно придумать сложный пароль и вписать его в файле ai-bolit.php в строке №34. <p>Например, <b>define('PASS', '%s');</b><p>
+    define('AI_STR_001', 'Отчет сканера <a href="https://revisium.com/ai/">AI-Bolit</a> v@@VERSION@@:');
+    define('AI_STR_002', 'Обращаем внимание на то, что большинство CMS <b>без дополнительной защиты</b> рано или поздно <b>взламывают</b>.<p> Компания <a href="https://revisium.com/">"Ревизиум"</a> предлагает услугу превентивной защиты сайта от взлома с использованием уникальной <b>процедуры "цементирования сайта"</b>. Подробно на <a href="https://revisium.com/ru/client_protect/">странице услуги</a>. <p>Лучшее лечение &mdash; это профилактика.');
+    define('AI_STR_003', 'Не оставляйте файл отчета на сервере, и не давайте на него прямых ссылок с других сайтов. Информация из отчета может быть использована злоумышленниками для взлома сайта, так как содержит информацию о настройках сервера, файлах и каталогах.');
+    define('AI_STR_004', 'Путь');
+    define('AI_STR_005', 'Изменение свойств');
+    define('AI_STR_006', 'Изменение содержимого');
+    define('AI_STR_007', 'Размер');
+    define('AI_STR_008', 'Конфигурация PHP');
+    define('AI_STR_009', "Вы установили слабый пароль на скрипт AI-BOLIT. Укажите пароль не менее 8 символов, содержащий латинские буквы в верхнем и нижнем регистре, а также цифры. Например, такой <b>%s</b>");
+    define('AI_STR_010', "Сканер AI-Bolit запускается с паролем. Если это первый запуск сканера, вам нужно придумать сложный пароль и вписать его в файле ai-bolit.php в строке №34. <p>Например, <b>define('PASS', '%s');</b><p>
 После этого откройте сканер в браузере, указав пароль в параметре \"p\". <p>Например, так <b>http://mysite.ru/ai-bolit.php?p=%s</b>. ");
-define('AI_STR_011', 'Текущая директория не доступна для чтения скрипту. Пожалуйста, укажите права на доступ <b>rwxr-xr-x</b> или с помощью командной строки <b>chmod +r имя_директории</b>');
-define('AI_STR_012', "Затрачено времени: <b>%s</b>. Сканирование начато %s, сканирование завершено %s");
-define('AI_STR_013', 'Всего проверено %s директорий и %s файлов.');
-define('AI_STR_014', '<div class="rep" style="color: #0000A0">Внимание, скрипт выполнил быструю проверку сайта. Проверяются только наиболее критические файлы, но часть вредоносных скриптов может быть не обнаружена. Пожалуйста, запустите скрипт из командной строки для выполнения полного тестирования. Подробнее смотрите в <a href="https://revisium.com/ai/faq.php">FAQ вопрос №10</a>.</div>');
-define('AI_STR_015', '<div class="title">Критические замечания</div>');
-define('AI_STR_016', 'Эти файлы могут быть вредоносными или хакерскими скриптами');
-define('AI_STR_017', 'Вредоносные скрипты не найдены. Попробуйте сканер в режиме "Параноидальный".');
-define('AI_STR_018', 'Эти файлы могут быть javascript вирусами');
-define('AI_STR_019', 'Обнаружены сигнатуры исполняемых файлов unix и нехарактерных скриптов. Они могут быть вредоносными файлами');
-define('AI_STR_020', 'Двойное расширение, зашифрованный контент или подозрение на вредоносный скрипт. Требуется дополнительный анализ');
-define('AI_STR_021', 'Подозрение на вредоносный скрипт');
-define('AI_STR_022', 'Символические ссылки (symlinks)');
-define('AI_STR_023', 'Скрытые файлы');
-define('AI_STR_024', 'Возможно, каталог с дорвеем');
-define('AI_STR_025', 'Не найдено директорий c дорвеями');
-define('AI_STR_026', 'Предупреждения');
-define('AI_STR_027', 'Подозрение на мобильный редирект, подмену расширений или автовнедрение кода');
-define('AI_STR_028', 'В не .php файле содержится стартовая сигнатура PHP кода. Возможно, там вредоносный код');
-define('AI_STR_029', 'Дорвеи, реклама, спам-ссылки, редиректы');
-define('AI_STR_030', 'Непроверенные файлы - ошибка чтения');
-define('AI_STR_031', 'Невидимые ссылки. Подозрение на ссылочный спам');
-define('AI_STR_032', 'Невидимые ссылки');
-define('AI_STR_033', 'Отображены только первые ');
-define('AI_STR_034', 'Подозрение на дорвей');
-define('AI_STR_035', 'Скрипт использует код, который часто встречается во вредоносных скриптах');
-define('AI_STR_036', 'Директории из файла .adirignore были пропущены при сканировании');
-define('AI_STR_037', 'Версии найденных CMS');
-define('AI_STR_038', 'Большие файлы (больше чем %s). Пропущено');
-define('AI_STR_039', 'Не найдено файлов больше чем %s');
-define('AI_STR_040', 'Временные файлы или файлы(каталоги) - кандидаты на удаление по ряду причин');
-define('AI_STR_041', 'Потенциально небезопасно! Директории, доступные скрипту на запись');
-define('AI_STR_042', 'Не найдено директорий, доступных на запись скриптом');
-define('AI_STR_043', 'Использовано памяти при сканировании: ');
-define('AI_STR_044', 'Просканированы только файлы, перечисленные в ' . DOUBLECHECK_FILE . '. Для полного сканирования удалите файл ' . DOUBLECHECK_FILE . ' и запустите сканер повторно.');
-define('AI_STR_045', '<div class="rep">Внимание! Выполнена экспресс-проверка сайта. Просканированы только файлы с расширением .php, .js, .html, .htaccess. В этом режиме могут быть пропущены вирусы и хакерские скрипты в файлах с другими расширениями. Чтобы выполнить более тщательное сканирование, поменяйте значение настройки на <b>\'scan_all_files\' => 1</b> в строке 50 или откройте сканер в браузере с параметром full: <b><a href="ai-bolit.php?p=' . PASS . '&full">ai-bolit.php?p=' . PASS . '&full</a></b>. <p>Не забудьте перед повторным запуском удалить файл ' . DOUBLECHECK_FILE . '</div>');
-define('AI_STR_050', 'Замечания и предложения по работе скрипта и не обнаруженные вредоносные скрипты присылайте на <a href="mailto:ai@revisium.com">ai@revisium.com</a>.<p>Также будем чрезвычайно благодарны за любые упоминания скрипта AI-Bolit на вашем сайте, в блоге, среди друзей, знакомых и клиентов. Ссылочку можно поставить на <a href="https://revisium.com/ai/">https://revisium.com/ai/</a>. <p>Если будут вопросы - пишите <a href="mailto:ai@revisium.com">ai@revisium.com</a>. ');
-define('AI_STR_051', 'Отчет по ');
-define('AI_STR_052', 'Эвристический анализ обнаружил подозрительные файлы. Проверьте их на наличие вредоносного кода.');
-define('AI_STR_053', 'Много косвенных вызовов функции');
-define('AI_STR_054', 'Подозрение на обфусцированные переменные');
-define('AI_STR_055', 'Подозрительное использование массива глобальных переменных');
-define('AI_STR_056', 'Дробление строки на символы');
-define('AI_STR_057', 'Сканирование выполнено в экспресс-режиме. Многие вредоносные скрипты могут быть не обнаружены.<br> Рекомендуем проверить сайт в режиме "Эксперт" или "Параноидальный". Подробно описано в <a href="https://revisium.com/ai/faq.php">FAQ</a> и инструкции к скрипту.');
-define('AI_STR_058', 'Обнаружены фишинговые страницы');
+    define('AI_STR_011', 'Текущая директория не доступна для чтения скрипту. Пожалуйста, укажите права на доступ <b>rwxr-xr-x</b> или с помощью командной строки <b>chmod +r имя_директории</b>');
+    define('AI_STR_012', "Затрачено времени: <b>%s</b>. Сканирование начато %s, сканирование завершено %s");
+    define('AI_STR_013', 'Всего проверено %s директорий и %s файлов.');
+    define('AI_STR_014', '<div class="rep" style="color: #0000A0">Внимание, скрипт выполнил быструю проверку сайта. Проверяются только наиболее критические файлы, но часть вредоносных скриптов может быть не обнаружена. Пожалуйста, запустите скрипт из командной строки для выполнения полного тестирования. Подробнее смотрите в <a href="https://revisium.com/ai/faq.php">FAQ вопрос №10</a>.</div>');
+    define('AI_STR_015', '<div class="title">Критические замечания</div>');
+    define('AI_STR_016', 'Эти файлы могут быть вредоносными или хакерскими скриптами');
+    define('AI_STR_017', 'Вредоносные скрипты не найдены. Попробуйте сканер в режиме "Параноидальный".');
+    define('AI_STR_018', 'Эти файлы могут быть javascript вирусами');
+    define('AI_STR_019', 'Обнаружены сигнатуры исполняемых файлов unix и нехарактерных скриптов. Они могут быть вредоносными файлами');
+    define('AI_STR_020', 'Двойное расширение, зашифрованный контент или подозрение на вредоносный скрипт. Требуется дополнительный анализ');
+    define('AI_STR_021', 'Подозрение на вредоносный скрипт');
+    define('AI_STR_022', 'Символические ссылки (symlinks)');
+    define('AI_STR_023', 'Скрытые файлы');
+    define('AI_STR_024', 'Возможно, каталог с дорвеем');
+    define('AI_STR_025', 'Не найдено директорий c дорвеями');
+    define('AI_STR_026', 'Предупреждения');
+    define('AI_STR_027', 'Подозрение на мобильный редирект, подмену расширений или автовнедрение кода');
+    define('AI_STR_028', 'В не .php файле содержится стартовая сигнатура PHP кода. Возможно, там вредоносный код');
+    define('AI_STR_029', 'Дорвеи, реклама, спам-ссылки, редиректы');
+    define('AI_STR_030', 'Непроверенные файлы - ошибка чтения');
+    define('AI_STR_031', 'Невидимые ссылки. Подозрение на ссылочный спам');
+    define('AI_STR_032', 'Невидимые ссылки');
+    define('AI_STR_033', 'Отображены только первые ');
+    define('AI_STR_034', 'Подозрение на дорвей');
+    define('AI_STR_035', 'Скрипт использует код, который часто встречается во вредоносных скриптах');
+    define('AI_STR_036', 'Директории из файла .adirignore были пропущены при сканировании');
+    define('AI_STR_037', 'Версии найденных CMS');
+    define('AI_STR_038', 'Большие файлы (больше чем %s). Пропущено');
+    define('AI_STR_039', 'Не найдено файлов больше чем %s');
+    define('AI_STR_040', 'Временные файлы или файлы(каталоги) - кандидаты на удаление по ряду причин');
+    define('AI_STR_041', 'Потенциально небезопасно! Директории, доступные скрипту на запись');
+    define('AI_STR_042', 'Не найдено директорий, доступных на запись скриптом');
+    define('AI_STR_043', 'Использовано памяти при сканировании: ');
+    define('AI_STR_044', 'Просканированы только файлы, перечисленные в ' . DOUBLECHECK_FILE . '. Для полного сканирования удалите файл ' . DOUBLECHECK_FILE . ' и запустите сканер повторно.');
+    define('AI_STR_045', '<div class="rep">Внимание! Выполнена экспресс-проверка сайта. Просканированы только файлы с расширением .php, .js, .html, .htaccess. В этом режиме могут быть пропущены вирусы и хакерские скрипты в файлах с другими расширениями. Чтобы выполнить более тщательное сканирование, поменяйте значение настройки на <b>\'scan_all_files\' => 1</b> в строке 50 или откройте сканер в браузере с параметром full: <b><a href="ai-bolit.php?p=' . PASS . '&full">ai-bolit.php?p=' . PASS . '&full</a></b>. <p>Не забудьте перед повторным запуском удалить файл ' . DOUBLECHECK_FILE . '</div>');
+    define('AI_STR_050', 'Замечания и предложения по работе скрипта и не обнаруженные вредоносные скрипты присылайте на <a href="mailto:ai@revisium.com">ai@revisium.com</a>.<p>Также будем чрезвычайно благодарны за любые упоминания скрипта AI-Bolit на вашем сайте, в блоге, среди друзей, знакомых и клиентов. Ссылочку можно поставить на <a href="https://revisium.com/ai/">https://revisium.com/ai/</a>. <p>Если будут вопросы - пишите <a href="mailto:ai@revisium.com">ai@revisium.com</a>. ');
+    define('AI_STR_051', 'Отчет по ');
+    define('AI_STR_052', 'Эвристический анализ обнаружил подозрительные файлы. Проверьте их на наличие вредоносного кода.');
+    define('AI_STR_053', 'Много косвенных вызовов функции');
+    define('AI_STR_054', 'Подозрение на обфусцированные переменные');
+    define('AI_STR_055', 'Подозрительное использование массива глобальных переменных');
+    define('AI_STR_056', 'Дробление строки на символы');
+    define('AI_STR_057', 'Сканирование выполнено в экспресс-режиме. Многие вредоносные скрипты могут быть не обнаружены.<br> Рекомендуем проверить сайт в режиме "Эксперт" или "Параноидальный". Подробно описано в <a href="https://revisium.com/ai/faq.php">FAQ</a> и инструкции к скрипту.');
+    define('AI_STR_058', 'Обнаружены фишинговые страницы');
 
-define('AI_STR_059', 'Мобильных редиректов');
-define('AI_STR_060', 'Вредоносных скриптов');
-define('AI_STR_061', 'JS Вирусов');
-define('AI_STR_062', 'Фишинговых страниц');
-define('AI_STR_063', 'Исполняемых файлов');
-define('AI_STR_064', 'IFRAME вставок');
-define('AI_STR_065', 'Пропущенных больших файлов');
-define('AI_STR_066', 'Ошибок чтения файлов');
-define('AI_STR_067', 'Зашифрованных файлов');
-define('AI_STR_068', 'Подозрительных (эвристика)');
-define('AI_STR_069', 'Символических ссылок');
-define('AI_STR_070', 'Скрытых файлов');
-define('AI_STR_072', 'Рекламных ссылок и кодов');
-define('AI_STR_073', 'Пустых ссылок');
-define('AI_STR_074', 'Сводный отчет');
-define('AI_STR_075', 'Скрипт бесплатный только для личного некоммерческого использования. Есть <a href="https://revisium.com/ai/faq.php#faq11" target=_blank>коммерческая лицензия</a> (пункт №11).');
+    define('AI_STR_059', 'Мобильных редиректов');
+    define('AI_STR_060', 'Вредоносных скриптов');
+    define('AI_STR_061', 'JS Вирусов');
+    define('AI_STR_062', 'Фишинговых страниц');
+    define('AI_STR_063', 'Исполняемых файлов');
+    define('AI_STR_064', 'IFRAME вставок');
+    define('AI_STR_065', 'Пропущенных больших файлов');
+    define('AI_STR_066', 'Ошибок чтения файлов');
+    define('AI_STR_067', 'Зашифрованных файлов');
+    define('AI_STR_068', 'Подозрительных (эвристика)');
+    define('AI_STR_069', 'Символических ссылок');
+    define('AI_STR_070', 'Скрытых файлов');
+    define('AI_STR_072', 'Рекламных ссылок и кодов');
+    define('AI_STR_073', 'Пустых ссылок');
+    define('AI_STR_074', 'Сводный отчет');
+    define('AI_STR_075', 'Скрипт бесплатный только для личного некоммерческого использования. Есть <a href="https://revisium.com/ai/faq.php#faq11" target=_blank>коммерческая лицензия</a> (пункт №11).');
 
-$tmp_str = <<<HTML_FOOTER
+    $tmp_str = <<<HTML_FOOTER
    <div class="disclaimer"><span class="vir">[!]</span> Отказ от гарантий: невозможно гарантировать обнаружение всех вредоносных скриптов. Поэтому разработчик сканера не несет ответственности за возможные последствия работы сканера AI-Bolit или неоправданные ожидания пользователей относительно функциональности и возможностей.
    </div>
    <div class="thanx">
@@ -182,20 +202,20 @@ $tmp_str = <<<HTML_FOOTER
 	</div>
 HTML_FOOTER;
 
-define('AI_STR_076', $tmp_str);
-define('AI_STR_077', "Подозрительные параметры времени изменения файла");
-define('AI_STR_078', "Подозрительные атрибуты файла");
-define('AI_STR_079', "Подозрительное местоположение файла");
-define('AI_STR_080', "Обращаем внимание, что обнаруженные файлы не всегда являются вирусами и хакерскими скриптами. Сканер старается минимизировать число ложных обнаружений, но это не всегда возможно, так как найденный фрагмент может встречаться как во вредоносных скриптах, так и в обычных.");
-define('AI_STR_081', "Уязвимости в скриптах");
-define('AI_STR_082', "Добавленные файлы");
-define('AI_STR_083', "Измененные файлы");
-define('AI_STR_084', "Удаленные файлы");
-define('AI_STR_085', "Добавленные каталоги");
-define('AI_STR_086', "Удаленные каталоги");
-define('AI_STR_087', "Изменения в файловой структуре");
+    define('AI_STR_076', $tmp_str);
+    define('AI_STR_077', "Подозрительные параметры времени изменения файла");
+    define('AI_STR_078', "Подозрительные атрибуты файла");
+    define('AI_STR_079', "Подозрительное местоположение файла");
+    define('AI_STR_080', "Обращаем внимание, что обнаруженные файлы не всегда являются вирусами и хакерскими скриптами. Сканер старается минимизировать число ложных обнаружений, но это не всегда возможно, так как найденный фрагмент может встречаться как во вредоносных скриптах, так и в обычных.");
+    define('AI_STR_081', "Уязвимости в скриптах");
+    define('AI_STR_082', "Добавленные файлы");
+    define('AI_STR_083', "Измененные файлы");
+    define('AI_STR_084', "Удаленные файлы");
+    define('AI_STR_085', "Добавленные каталоги");
+    define('AI_STR_086', "Удаленные каталоги");
+    define('AI_STR_087', "Изменения в файловой структуре");
 
-$l_Offer =<<<OFFER
+    $l_Offer = <<<OFFER
     <div>
 	 <div class="crit" style="font-size: 17px;"><b>Внимание! Наш сканер обнаружил подозрительный или вредоносный код</b>.</div>
 	 <br/>Скорее всего, ваш сайт был взломан и заражен. Рекомендуем срочно <a href="https://revisium.com/ru/order/" target=_blank>обратиться за консультацией</a> к специалистам по информационной безопасности.
@@ -213,116 +233,113 @@ $l_Offer =<<<OFFER
 OFFER;
 
 } else {
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // ENGLISH INTERFACE
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-$msg1 = "\"Display _MENU_ records\"";
-$msg2 = "\"Not found\"";
-$msg3 = "\"Display from _START_ to _END_ of _TOTAL_ files\"";
-$msg4 = "\"No files\"";
-$msg5 = "\"(total _MAX_)\"";
-$msg6 = "\"Filter/Search:\"";
-$msg7 = "\"First\"";
-$msg8 = "\"Previous\"";
-$msg9 = "\"Next\"";
-$msg10 = "\"Last\"";
-$msg11 = "\": activate to sort row ascending order\"";
-$msg12 = "\": activate to sort row descending order\"";
+    $msg1 = "\"Display _MENU_ records\"";
+    $msg2 = "\"Not found\"";
+    $msg3 = "\"Display from _START_ to _END_ of _TOTAL_ files\"";
+    $msg4 = "\"No files\"";
+    $msg5 = "\"(total _MAX_)\"";
+    $msg6 = "\"Filter/Search:\"";
+    $msg7 = "\"First\"";
+    $msg8 = "\"Previous\"";
+    $msg9 = "\"Next\"";
+    $msg10 = "\"Last\"";
+    $msg11 = "\": activate to sort row ascending order\"";
+    $msg12 = "\": activate to sort row descending order\"";
 
-define('AI_STR_001', 'AI-Bolit v@@VERSION@@ Scan Report:');
-define('AI_STR_002', '');
-define('AI_STR_003', 'Caution! Do not leave either ai-bolit.php or report file on server and do not provide direct links to the report file. Report file contains sensitive information about your website which could be used by hackers. So keep it in safe place and don\'t leave on website!');
-define('AI_STR_004', 'Path');
-define('AI_STR_005', 'iNode Changed');
-define('AI_STR_006', 'Modified');
-define('AI_STR_007', 'Size');
-define('AI_STR_008', 'PHP Info');
-define('AI_STR_009', "Your password for AI-BOLIT is too weak. Password must be more than 8 character length, contain both latin letters in upper and lower case, and digits. E.g. <b>%s</b>");
-define('AI_STR_010', "Open AI-BOLIT with password specified in the beggining of file in PASS variable. <br/>E.g. http://you_website.com/ai-bolit.php?p=<b>%s</b>");
-define('AI_STR_011', 'Current folder is not readable. Please change permission for <b>rwxr-xr-x</b> or using command line <b>chmod +r folder_name</b>');
-define('AI_STR_012', "<div class=\"rep\">%s malicious signatures known, %s virus signatures and other malicious code. Elapsed: <b>%s</b
+    define('AI_STR_001', 'AI-Bolit v@@VERSION@@ Scan Report:');
+    define('AI_STR_002', '');
+    define('AI_STR_003', 'Caution! Do not leave either ai-bolit.php or report file on server and do not provide direct links to the report file. Report file contains sensitive information about your website which could be used by hackers. So keep it in safe place and don\'t leave on website!');
+    define('AI_STR_004', 'Path');
+    define('AI_STR_005', 'iNode Changed');
+    define('AI_STR_006', 'Modified');
+    define('AI_STR_007', 'Size');
+    define('AI_STR_008', 'PHP Info');
+    define('AI_STR_009', "Your password for AI-BOLIT is too weak. Password must be more than 8 character length, contain both latin letters in upper and lower case, and digits. E.g. <b>%s</b>");
+    define('AI_STR_010', "Open AI-BOLIT with password specified in the beginning of file in PASS variable. <br/>E.g. http://you_website.com/ai-bolit.php?p=<b>%s</b>");
+    define('AI_STR_011', 'Current folder is not readable. Please change permission for <b>rwxr-xr-x</b> or using command line <b>chmod +r folder_name</b>');
+    define('AI_STR_012', "<div class=\"rep\">%s malicious signatures' known, %s virus signatures and other malicious code. Elapsed: <b>%s</b
 >.<br/>Started: %s. Stopped: %s</div> ");
-define('AI_STR_013', 'Scanned %s folders and %s files.');
-define('AI_STR_014', '<div class="rep" style="color: #0000A0">Attention! Script has performed quick scan. It scans only .html/.js/.php files  in quick scan mode so some of malicious scripts might not be detected. <br>Please launch script from a command line thru SSH to perform full scan.');
-define('AI_STR_015', '<div class="title">Critical</div>');
-define('AI_STR_016', 'Shell script signatures detected. Might be a malicious or hacker\'s scripts');
-define('AI_STR_017', 'Shell scripts signatures not detected.');
-define('AI_STR_018', 'Javascript virus signatures detected:');
-define('AI_STR_019', 'Unix executables signatures and odd scripts detected. They might be a malicious binaries or rootkits:');
-define('AI_STR_020', 'Suspicious encoded strings, extra .php extention or external includes detected in PHP files. Might be a malicious or hacker\'s script:');
-define('AI_STR_021', 'Might be a malicious or hacker\'s script:');
-define('AI_STR_022', 'Symlinks:');
-define('AI_STR_023', 'Hidden files:');
-define('AI_STR_024', 'Files might be a part of doorway:');
-define('AI_STR_025', 'Doorway folders not detected');
-define('AI_STR_026', 'Warnings');
-define('AI_STR_027', 'Malicious code in .htaccess (redirect to external server, extention handler replacement or malicious code auto-append):');
-define('AI_STR_028', 'Non-PHP file has PHP signature. Check for malicious code:');
-define('AI_STR_029', 'This script has black-SEO links or linkfarm. Check if it was installed by yourself:');
-define('AI_STR_030', 'Reading error. Skipped.');
-define('AI_STR_031', 'These files have invisible links, might be black-seo stuff:');
-define('AI_STR_032', 'List of invisible links:');
-define('AI_STR_033', 'Displayed first ');
-define('AI_STR_034', 'Folders contained too many .php or .html files. Might be a doorway:');
-define('AI_STR_035', 'Suspicious code detected. It\'s usually used in malicious scrips:');
-define('AI_STR_036', 'The following list of files specified in .adirignore has been skipped:');
-define('AI_STR_037', 'CMS found:');
-define('AI_STR_038', 'Large files (greater than %s! Skipped:');
-define('AI_STR_039', 'Files greater than %s not found');
-define('AI_STR_040', 'Files recommended to be remove due to security reason:');
-define('AI_STR_041', 'Potentially unsafe! Folders which are writable for scripts:');
-define('AI_STR_042', 'Writable folders not found');
-define('AI_STR_043', 'Memory used: ');
-define('AI_STR_044', 'Quick scan through the files from ' . DOUBLECHECK_FILE . '. For full scan remove ' . DOUBLECHECK_FILE . ' and launch scanner once again.');
-define('AI_STR_045', '<div class="notice"><span class="vir">[!]</span> Ai-BOLIT is working in quick scan mode, only .php, .html, .htaccess files will be checked. Change the following setting \'scan_all_files\' => 1 to perform full scanning.</b>. </div>');
-define('AI_STR_050', "I'm sincerely appreciate reports for any bugs you may found in the script. Please email me: <a href=\"mailto:audit@revisium.com\">audit@revisium.com</a>.<p> Also I appriciate any reference to the script in your blog or forum posts. Thank you for the link to download page: <a href=\"https://revisium.com/aibo/\">https://revisium.com/aibo/</a>");
-define('AI_STR_051', 'Report for ');
-define('AI_STR_052', 'Heuristic Analyzer has detected suspicious files. Check if they are malware.');
-define('AI_STR_053', 'Function called by reference');
-define('AI_STR_054', 'Suspected for obfuscated variables');
-define('AI_STR_055', 'Suspected for $GLOBAL array usage');
-define('AI_STR_056', 'Abnormal split of string');
-define('AI_STR_057', 'Scanning has been done in simple mode. It is strongly recommended to perform scanning in "Expert" mode. See readme.txt for details.');
-define('AI_STR_058', 'Phishing pages detected:');
+    define('AI_STR_013', 'Scanned %s folders and %s files.');
+    define('AI_STR_014', '<div class="rep" style="color: #0000A0">Attention! Script has performed quick scan. It scans only .html/.js/.php files  in quick scan mode so some of malicious scripts might not be detected. <br>Please launch script from a command line through SSH to perform full scan.');
+    define('AI_STR_015', '<div class="title">Critical</div>');
+    define('AI_STR_016', 'Shell script signatures detected. Might be a malicious or hacker\'s scripts');
+    define('AI_STR_017', 'Shell scripts signatures not detected.');
+    define('AI_STR_018', 'Javascript virus signatures detected:');
+    define('AI_STR_019', 'Unix executables signatures and odd scripts detected. They might be a malicious binaries or rootkits:');
+    define('AI_STR_020', 'Suspicious encoded strings, extra .php extension or external includes detected in PHP files. Might be a malicious or hacker\'s script:');
+    define('AI_STR_021', 'Might be a malicious or hacker\'s script:');
+    define('AI_STR_022', 'Symlinks:');
+    define('AI_STR_023', 'Hidden files:');
+    define('AI_STR_024', 'Files might be a part of doorway:');
+    define('AI_STR_025', 'Doorway folders not detected');
+    define('AI_STR_026', 'Warnings');
+    define('AI_STR_027', 'Malicious code in .htaccess (redirect to external server, extension handler replacement or malicious code auto-append):');
+    define('AI_STR_028', 'Non-PHP file has PHP signature. Check for malicious code:');
+    define('AI_STR_029', 'This script has black-SEO links or linkfarm. Check if it was installed by yourself:');
+    define('AI_STR_030', 'Reading error. Skipped.');
+    define('AI_STR_031', 'These files have invisible links, might be black-seo stuff:');
+    define('AI_STR_032', 'List of invisible links:');
+    define('AI_STR_033', 'Displayed first ');
+    define('AI_STR_034', 'Folders contained too many .php or .html files. Might be a doorway:');
+    define('AI_STR_035', 'Suspicious code detected. It\'s usually used in malicious scrips:');
+    define('AI_STR_036', 'The following list of files specified in .adirignore has been skipped:');
+    define('AI_STR_037', 'CMS found:');
+    define('AI_STR_038', 'Large files (greater than %s! Skipped:');
+    define('AI_STR_039', 'Files greater than %s not found');
+    define('AI_STR_040', 'Files recommended to be remove due to security reason:');
+    define('AI_STR_041', 'Potentially unsafe! Folders which are writable for scripts:');
+    define('AI_STR_042', 'Writable folders not found');
+    define('AI_STR_043', 'Memory used: ');
+    define('AI_STR_044', 'Quick scan through the files from ' . DOUBLECHECK_FILE . '. For full scan remove ' . DOUBLECHECK_FILE . ' and launch scanner once again.');
+    define('AI_STR_045', '<div class="notice"><span class="vir">[!]</span> Ai-BOLIT is working in quick scan mode, only .php, .html, .htaccess files will be checked. Change the following setting \'scan_all_files\' => 1 to perform full scanning.</b>. </div>');
+    define('AI_STR_050', "I'm sincerely appreciate reports for any bugs you may found in the script. Please email me: <a href=\"mailto:audit@revisium.com\">audit@revisium.com</a>.<p> Also I appreciate any reference to the script in your blog or forum posts. Thank you for the link to download page: <a href=\"https://revisium.com/aibo/\">https://revisium.com/aibo/</a>");
+    define('AI_STR_051', 'Report for ');
+    define('AI_STR_052', 'Heuristic Analyzer has detected suspicious files. Check if they are malware.');
+    define('AI_STR_053', 'Function called by reference');
+    define('AI_STR_054', 'Suspected for obfuscated variables');
+    define('AI_STR_055', 'Suspected for $GLOBAL array usage');
+    define('AI_STR_056', 'Abnormal split of string');
+    define('AI_STR_057', 'Scanning has been done in simple mode. It is strongly recommended to perform scanning in "Expert" mode. See readme.txt for details.');
+    define('AI_STR_058', 'Phishing pages detected:');
+    define('AI_STR_059', 'Mobile redirects');
+    define('AI_STR_060', 'Malware');
+    define('AI_STR_061', 'JS viruses');
+    define('AI_STR_062', 'Phishing pages');
+    define('AI_STR_063', 'Unix executables');
+    define('AI_STR_064', 'IFRAME injections');
+    define('AI_STR_065', 'Skipped big files');
+    define('AI_STR_066', 'Reading errors');
+    define('AI_STR_067', 'Encrypted files');
+    define('AI_STR_068', 'Suspicious (heuristics)');
+    define('AI_STR_069', 'Symbolic links');
+    define('AI_STR_070', 'Hidden files');
+    define('AI_STR_072', 'Adware and spam links');
+    define('AI_STR_073', 'Empty links');
+    define('AI_STR_074', 'Summary');
+    define('AI_STR_075', 'For non-commercial use only. Please, purchase the license for commercial usage of the scanner. Email us: ai@revisium.com');
 
-define('AI_STR_059', 'Mobile redirects');
-define('AI_STR_060', 'Malware');
-define('AI_STR_061', 'JS viruses');
-define('AI_STR_062', 'Phishing pages');
-define('AI_STR_063', 'Unix executables');
-define('AI_STR_064', 'IFRAME injections');
-define('AI_STR_065', 'Skipped big files');
-define('AI_STR_066', 'Reading errors');
-define('AI_STR_067', 'Encrypted files');
-define('AI_STR_068', 'Suspicious (heuristics)');
-define('AI_STR_069', 'Symbolic links');
-define('AI_STR_070', 'Hidden files');
-define('AI_STR_072', 'Adware and spam links');
-define('AI_STR_073', 'Empty links');
-define('AI_STR_074', 'Summary');
-define('AI_STR_075', 'For non-commercial use only. Please, purchase the license for commercial usage of the scanner. Email us: ai@revisium.com');
-
-$tmp_str =<<<HTML_FOOTER
+    $tmp_str = <<<HTML_FOOTER
 		   <div class="disclaimer"><span class="vir">[!]</span> Disclaimer: We're not liable to you for any damages, including general, special, incidental or consequential damages arising out of the use or inability to use the script (including but not limited to loss of data or report being rendered inaccurate or failure of the script). There's no warranty for the program. Use at your own risk.
 		   </div>
 		   <div class="thanx">
 		      We're greatly appreciate for any references in the social networks, forums or blogs to our scanner AI-BOLIT <a href="https://revisium.com/aibo/">https://revisium.com/aibo/</a>.<br/>
-		     <p>Write us if you have any questions regarding scannner usage or report <a href="mailto:ai@revisium.com">ai@revisium.com</a>.</p>
+		     <p>Write us if you have any questions regarding scanner usage or report <a href="mailto:ai@revisium.com">ai@revisium.com</a>.</p>
 			</div>
 HTML_FOOTER;
-define('AI_STR_076', $tmp_str);
-define('AI_STR_077', "Suspicious file mtime and ctime");
-define('AI_STR_078', "Suspicious file permissions");
-define('AI_STR_079', "Suspicious file location");
-define('AI_STR_081', "Vulnerable Scripts");
-define('AI_STR_082', "Added files");
-define('AI_STR_083', "Modified files");
-define('AI_STR_084', "Deleted files");
-define('AI_STR_085', "Added directories");
-define('AI_STR_086', "Deleted directories");
-define('AI_STR_087', "Integrity Check Report");
+    define('AI_STR_076', $tmp_str);
+    define('AI_STR_077', "Suspicious file mtime and ctime");
+    define('AI_STR_078', "Suspicious file permissions");
+    define('AI_STR_079', "Suspicious file location");
+    define('AI_STR_081', "Vulnerable Scripts");
+    define('AI_STR_082', "Added files");
+    define('AI_STR_083', "Modified files");
+    define('AI_STR_084', "Deleted files");
+    define('AI_STR_085', "Added directories");
+    define('AI_STR_086', "Deleted directories");
+    define('AI_STR_087', "Integrity Check Report");
 
-$l_Offer =<<<HTML_OFFER_EN
+    $l_Offer = <<<HTML_OFFER_EN
 <div>
  <div class="crit" style="font-size: 17px;"><b>Danger! Malicious or suspicious files have been detected on the website.</b></div>
  <br/>Most likely the website has been compromised. Please, <a href="https://revisium.com/en/home/" target=_blank>contact security experts</a> or experienced webmaster immediately to clean up the website from malware.
@@ -334,536 +351,21 @@ $l_Offer =<<<HTML_OFFER_EN
 <div class="caution">@@CAUTION@@</div>
 HTML_OFFER_EN;
 
-define('AI_STR_080', "Notice! Some of detected files may not contain malicious code. Scanner tries to minimize a number of false positives, but sometimes it's impossible, because same piece of code may be used either in malware or in normal scripts.");
+    define('AI_STR_080', "Notice! Some of detected files may not contain malicious code. Scanner tries to minimize a number of false positives, but sometimes it's impossible, because same piece of code may be used either in malware or in normal scripts.");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-$l_Template =<<<MAIN_PAGE
-<html>
-<head>
-<!-- revisium.com/ai/ -->
-<meta http-equiv="Content-Type" content="text/html;charset=utf-8" >
-<META NAME="ROBOTS" CONTENT="NOINDEX,NOFOLLOW">
-<title>@@HEAD_TITLE@@</title>
-<style type="text/css" title="currentStyle">
-	@import "https://revisium.com/extra/media/css/demo_page2.css";
-	@import "https://revisium.com/extra/media/css/jquery.dataTables2.css";
-</style>
-
-<script type="text/javascript" language="javascript" src="https://yandex.st/jquery/2.1.0/jquery.min.js"></script>
-<script type="text/javascript" language="javascript" src="https://datatables.net/download/build/jquery.dataTables.js"></script>
-
-<style type="text/css">
- body 
- {
-   font-family: Tahoma;
-   color: #5a5a5a;
-   background: #FFFFFF;
-   font-size: 14px;
-   margin: 20px;
-   padding: 0;
- }
-
-.header
- {
-   font-size: 34px;
-   margin: 0 0 10px 0;
- }
-
- .hidd
- {
-    display: none;
- }
- 
- .ok
- {
-    color: green;
- }
- 
- .line_no
- {
-   -webkit-border-radius: 6px;
-   -moz-border-radius: 6px;
-   border-radius: 6px;
-
-   background: #DAF2C1;
-   padding: 2px 5px 2px 5px;
-   margin: 0 5px 0 5px;
- }
- 
- .credits_header 
- {
-  -webkit-border-radius: 6px;
-   -moz-border-radius: 6px;
-   border-radius: 6px;
-
-   background: #F2F2F2;
-   padding: 10px;
-   font-size: 11px;
-    margin: 0 0 10px 0;
- }
- 
- .marker
- {
-    color: #FF0090;
-	font-weight: 100;
-	background: #FF0090;
-	padding: 2px 0px 2px 0px;
-	width: 2px;
- }
- 
- .title
- {
-   font-size: 24px;
-   margin: 20px 0 10px 0;
-   color: #9CA9D1;
-}
-
-.summary 
-{
-  float: left;
-  width: 500px;
-}
-
-.summary TD
-{
-  font-size: 12px;
-  border-bottom: 1px solid #F0F0F0;
-  font-weight: 700;
-  padding: 10px 0 10px 0;
-}
- 
-.crit, .vir
-{
-  color: #D84B55;
-}
-
-.intitem
-{
-  color:#4a6975;
-}
-
-.spacer
-{
-   margin: 0 0 50px 0;
-   clear:both;
-}
-
-.warn
-{
-  color: #F6B700;
-}
-
-.clear
-{
-   clear: both;
-}
-
-.offer
-{
-  -webkit-border-radius: 6px;
-   -moz-border-radius: 6px;
-   border-radius: 6px;
-
-   width: 500px;
-   background: #ECF7DE;
-   color: #747474;
-   font-size: 11px;
-   font-family: Arial;
-   padding: 20px;
-   margin: 20px 0 0 500px;
-   
-   font-size: 16px;
-}
- 
-.flist
-{
-   font-family: Arial;
-}
-
-.flist TD
-{
-   font-size: 11px;
-   padding: 5px;
-}
-
-.flist TH
-{
-   font-size: 12px;
-   height: 30px;
-   padding: 5px;
-   background: #CEE9EF;
-}
-
-
-.it
-{
-   font-size: 14px;
-   font-weight: 100;
-   margin-top: 10px;
-}
-
-.crit .it A {
-   color: #E50931; 
-   line-height: 25px;
-   text-decoration: none;
-}
-
-.warn .it A {
-   color: #F2C900; 
-   line-height: 25px;
-   text-decoration: none;
-}
-
-
-
-.details
-{
-   font-family: Calibri;
-   font-size: 12px;
-   margin: 10px 10px 10px 0px;
-}
-
-.crit .details
-{
-   color: #A08080;
-}
-
-.warn .details
-{
-   color: #808080;
-}
-
-.details A
-{
-  color: #FFF;
-  font-weight: 700;
-  text-decoration: none;
-  padding: 2px;
-  background: #E5CEDE;
-  -webkit-border-radius: 7px;
-   -moz-border-radius: 7px;
-   border-radius: 7px;
-}
-
-.details A:hover
-{
-   background: #A0909B;
-}
-
-.ctd
-{
-   margin: 10px 0px 10px 0;
-   align:center;
-}
-
-.ctd A 
-{
-   color: #0D9922;
-}
-
-.disclaimer
-{
-   color: darkgreen;
-   margin: 10px 10px 10px 0;
-}
-
-.note_vir
-{
-   margin: 10px 0 10px 0;
-   //padding: 10px;
-   color: #FF4F4F;
-   font-size: 15px;
-   font-weight: 700;
-   clear:both;
-  
-}
-
-.note_warn
-{
-   margin: 10px 0 10px 0;
-   color: #F6B700;
-   font-size: 15px;
-   font-weight: 700;
-   clear:both;
-}
-
-.note_int
-{
-   margin: 10px 0 10px 0;
-   color: #60b5d6;
-   font-size: 15px;
-   font-weight: 700;
-   clear:both;
-}
-
-.updateinfo
-{
-  color: #FFF;
-  text-decoration: none;
-  background: #E5CEDE;
-  -webkit-border-radius: 7px;
-   -moz-border-radius: 7px;
-   border-radius: 7px;
-
-  margin: 10px 0 10px 0px;   
-  padding: 10px;
-}
-
-
-.caution
-{
-  color: #EF7B75;
-  text-decoration: none;
-  margin: 20px 0 0px 0px;   
-  font-size: 12px;
-}
-
-.footer
-{
-  color: #303030;
-  text-decoration: none;
-  background: #F4F4F4;
-  -webkit-border-radius: 7px;
-   -moz-border-radius: 7px;
-   border-radius: 7px;
-
-  margin: 80px 0 10px 0px;   
-  padding: 10px;
-}
-
-.rep
-{
-  color: #303030;
-  text-decoration: none;
-  background: #94DDDB;
-  -webkit-border-radius: 7px;
-   -moz-border-radius: 7px;
-   border-radius: 7px;
-
-  margin: 10px 0 10px 0px;   
-  padding: 10px;
-  font-size: 12px;
-}
-
-</style>
-
-</head>
-<body>
-
-<div class="header">@@MAIN_TITLE@@ @@PATH_URL@@ (@@MODE@@)</div>
-<div class="credits_header">@@CREDITS@@</div>
-<div class="details_header">
-   @@STAT@@<br/>
-   @@SCANNED@@ @@MEMORY@@.
- </div>
-
- @@WARN_QUICK@@
- 
- <div class="summary">
-@@SUMMARY@@
- </div>
- 
- <div class="offer">
-@@OFFER@@
- </div>
-  
- <div class="clear"></div>
- 
- @@MAIN_CONTENT@@
- 
-	<div class="footer">
-	@@FOOTER@@
-	</div>
-	
-<script language="javascript">
-
-function hsig(id) {
-  var divs = document.getElementsByTagName("tr");
-  for(var i = 0; i < divs.length; i++){
-     
-     if (divs[i].getAttribute('o') == id) {
-        divs[i].innerHTML = '';
-     }
-  }
-
-  return false;
-}
-
-
-$(document).ready(function(){
-    $('#table_crit').dataTable({
-       "aLengthMenu": [[100 , 500, -1], [100, 500, "All"]],
-       "aoColumns": [
-                                     {"iDataSort": 7, "width":"70%"},
-                                     {"iDataSort": 5},
-                                     {"iDataSort": 6},
-                                     {"bSortable": true},
-                                     {"bVisible": false},
-                                     {"bVisible": false},
-                                     {"bVisible": false},
-                                     {"bVisible": false}
-                     ],
-		"paging": true,
-       "iDisplayLength": 500,
-		"oLanguage": {
-			"sLengthMenu": $msg1,
-			"sZeroRecords": $msg2,
-			"sInfo": $msg3,
-			"sInfoEmpty": $msg4,
-			"sInfoFiltered": $msg5,
-			"sSearch":       $msg6,
-			"sUrl":          "",
-			"oPaginate": {
-				"sFirst": $msg7,
-				"sPrevious": $msg8,
-				"sNext": $msg9,
-				"sLast": $msg10
-			},
-			"oAria": {
-				"sSortAscending": $msg11,
-				"sSortDescending": $msg12	
-			}
-		}
-
-     } );
-
-});
-
-$(document).ready(function(){
-    $('#table_vir').dataTable({
-       "aLengthMenu": [[100 , 500, -1], [100, 500, "All"]],
-		"paging": true,
-       "aoColumns": [
-                                     {"iDataSort": 7, "width":"70%"},
-                                     {"iDataSort": 5},
-                                     {"iDataSort": 6},
-                                     {"bSortable": true},
-                                     {"bVisible": false},
-                                     {"bVisible": false},
-                                     {"bVisible": false},
-                                     {"bVisible": false}
-                     ],
-       "iDisplayLength": 500,
-		"oLanguage": {
-			"sLengthMenu": $msg1,
-			"sZeroRecords": $msg2,
-			"sInfo": $msg3,
-			"sInfoEmpty": $msg4,
-			"sInfoFiltered": $msg5,
-			"sSearch":       $msg6,
-			"sUrl":          "",
-			"oPaginate": {
-				"sFirst": $msg7,
-				"sPrevious": $msg8,
-				"sNext": $msg9,
-				"sLast": $msg10
-			},
-			"oAria": {
-				"sSortAscending":  $msg11,
-				"sSortDescending": $msg12	
-			}
-		},
-
-     } );
-
-});
-
-if ($('#table_warn0')) {
-    $('#table_warn0').dataTable({
-       "aLengthMenu": [[100 , 500, -1], [100, 500, "All"]],
-		"paging": true,
-       "aoColumns": [
-                                     {"iDataSort": 7, "width":"70%"},
-                                     {"iDataSort": 5},
-                                     {"iDataSort": 6},
-                                     {"bSortable": true},
-                                     {"bVisible": false},
-                                     {"bVisible": false},
-                                     {"bVisible": false},
-                                     {"bVisible": false}
-                     ],
-			         "iDisplayLength": 500,
-			  		"oLanguage": {
-			  			"sLengthMenu": $msg1,
-			  			"sZeroRecords": $msg2,
-			  			"sInfo": $msg3,
-			  			"sInfoEmpty": $msg4,
-			  			"sInfoFiltered": $msg5,
-			  			"sSearch":       $msg6,
-			  			"sUrl":          "",
-			  			"oPaginate": {
-			  				"sFirst": $msg7,
-			  				"sPrevious": $msg8,
-			  				"sNext": $msg9,
-			  				"sLast": $msg10
-			  			},
-			  			"oAria": {
-			  				"sSortAscending":  $msg11,
-			  				"sSortDescending": $msg12	
-			  			}
-		}
-
-     } );
-}
-
-if ($('#table_warn1')) {
-    $('#table_warn1').dataTable({
-       "aLengthMenu": [[100 , 500, -1], [100, 500, "All"]],
-		"paging": true,
-       "aoColumns": [
-                                     {"iDataSort": 7, "width":"70%"},
-                                     {"iDataSort": 5},
-                                     {"iDataSort": 6},
-                                     {"bSortable": true},
-                                     {"bVisible": false},
-                                     {"bVisible": false},
-                                     {"bVisible": false},
-                                     {"bVisible": false}
-                     ],
-			         "iDisplayLength": 500,
-			  		"oLanguage": {
-			  			"sLengthMenu": $msg1,
-			  			"sZeroRecords": $msg2,
-			  			"sInfo": $msg3,
-			  			"sInfoEmpty": $msg4,
-			  			"sInfoFiltered": $msg5,
-			  			"sSearch":       $msg6,
-			  			"sUrl":          "",
-			  			"oPaginate": {
-			  				"sFirst": $msg7,
-			  				"sPrevious": $msg8,
-			  				"sNext": $msg9,
-			  				"sLast": $msg10
-			  			},
-			  			"oAria": {
-			  				"sSortAscending":  $msg11,
-			  				"sSortDescending": $msg12	
-			  			}
-		}
-
-     } );
-}
-
-
-</script>
-<!-- @@SERVICE_INFO@@  -->
- </body>
-</html>
-MAIN_PAGE;
+include 'html_data.php';
 
 $g_AiBolitAbsolutePath = dirname(__FILE__);
-
+$l_Template = '';
 if (file_exists($g_AiBolitAbsolutePath . '/ai-design.html')) {
-  $l_Template = file_get_contents($g_AiBolitAbsolutePath . '/ai-design.html');
+    $l_Template = file_get_contents($g_AiBolitAbsolutePath . '/ai-design.html');
 }
 
 $l_Template = str_replace('@@MAIN_TITLE@@', AI_STR_001, $l_Template);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 //BEGIN_SIG 20/08/2016 12:17:58
+/** @noinspection SpellCheckingInspection */
 $g_DBShe = unserialize(base64_decode("YTo0MzA6e2k6MDtzOjE1OiJ3NGwzWHpZMyBNYWlsZXIiO2k6MTtzOjEwOiJDb2RlZF9ieV9WIjtpOjI7czozNToibW92ZV91cGxvYWRlZF9maWxlKCRfRklMRVNbPHFxPkYxbDMiO2k6MztzOjEzOiJCeTxzMT5LeW1Mam5rIjtpOjQ7czoxMzoiQnk8czE+U2g0TGluayI7aTo1O3M6MTY6IkJ5PHMxPkFub25Db2RlcnMiO2k6NjtzOjQ2OiIkdXNlckFnZW50cyA9IGFycmF5KCJHb29nbGUiLCAiU2x1cnAiLCAiTVNOQm90IjtpOjc7czo2OiJbM3Jhbl0iO2k6ODtzOjEwOiJEYXduX2FuZ2VsIjtpOjk7czo4OiJSM0RUVVhFUyI7aToxMDtzOjIwOiJ2aXNpdG9yVHJhY2tlcl9pc01vYiI7aToxMTtzOjI0OiJjb21fY29udGVudC9hcnRpY2xlZC5waHAiO2k6MTI7czoxNzoiPHRpdGxlPkVtc1Byb3h5IHYiO2k6MTM7czoxMzoiYW5kcm9pZC1pZ3JhLSI7aToxNDtzOjE1OiI9PT06OjptYWQ6Ojo9PT0iO2k6MTU7czo1OiJINHhPciI7aToxNjtzOjg6IlI0cEg0eDByIjtpOjE3O3M6ODoiTkc2ODlTa3ciO2k6MTg7czoxMToiZm9wby5jb20uYXIiO2k6MTk7czo5OiI2NC42OC44MC4iO2k6MjA7czo4OiJIYXJjaGFMaSI7aToyMTtzOjE1OiJ4eFI5OW11c3ZpZWkweDAiO2k6MjI7czoxMToiUC5oLnAuUy5wLnkiO2k6MjM7czoxNDoiX3NoZWxsX2F0aWxkaV8iO2k6MjQ7czo5OiJ+IFNoZWxsIEkiO2k6MjU7czo2OiIweGRkODIiO2k6MjY7czoxNDoiQW50aWNoYXQgc2hlbGwiO2k6Mjc7czoxMjoiQUxFTWlOIEtSQUxpIjtpOjI4O3M6MTY6IkFTUFggU2hlbGwgYnkgTFQiO2k6Mjk7czo5OiJhWlJhaUxQaFAiO2k6MzA7czoyMjoiQ29kZWQgQnkgQ2hhcmxpY2hhcGxpbiI7aTozMTtzOjc6IkJsMG9kM3IiO2k6MzI7czoxMjoiQlkgaVNLT1JQaVRYIjtpOjMzO3M6MTE6ImRldmlselNoZWxsIjtpOjM0O3M6MzA6IldyaXR0ZW4gYnkgQ2FwdGFpbiBDcnVuY2ggVGVhbSI7aTozNTtzOjk6ImMyMDA3LnBocCI7aTozNjtzOjIyOiJDOTkgTW9kaWZpZWQgQnkgUHN5Y2gwIjtpOjM3O3M6MTc6IiRjOTlzaF91cGRhdGVmdXJsIjtpOjM4O3M6OToiQzk5IFNoZWxsIjtpOjM5O3M6MjI6ImNvb2tpZW5hbWUgPSAid2llZWVlZSIiO2k6NDA7czozODoiQ29kZWQgYnkgOiBTdXBlci1DcnlzdGFsIGFuZCBNb2hhamVyMjIiO2k6NDE7czoxMjoiQ3J5c3RhbFNoZWxsIjtpOjQyO3M6MjM6IlRFQU0gU0NSSVBUSU5HIC0gUk9ETk9DIjtpOjQzO3M6MTE6IkN5YmVyIFNoZWxsIjtpOjQ0O3M6NzoiZDBtYWlucyI7aTo0NTtzOjEzOiJEYXJrRGV2aWx6LmlOIjtpOjQ2O3M6MjQ6IlNoZWxsIHdyaXR0ZW4gYnkgQmwwb2QzciI7aTo0NztzOjMzOiJEaXZlIFNoZWxsIC0gRW1wZXJvciBIYWNraW5nIFRlYW0iO2k6NDg7czoxNToiRGV2ci1pIE1lZnNlZGV0IjtpOjQ5O3M6MzI6IkNvbWFuZG9zIEV4Y2x1c2l2b3MgZG8gRFRvb2wgUHJvIjtpOjUwO3M6MjA6IkVtcGVyb3IgSGFja2luZyBURUFNIjtpOjUxO3M6MjA6IkZpeGVkIGJ5IEFydCBPZiBIYWNrIjtpOjUyO3M6MjE6IkZhVGFMaXNUaUN6X0Z4IEZ4MjlTaCI7aTo1MztzOjI3OiJMdXRmZW4gRG9zeWF5aSBBZGxhbmRpcmluaXoiO2k6NTQ7czoyMjoidGhpcyBpcyBhIHByaXYzIHNlcnZlciI7aTo1NTtzOjEzOiJHRlMgV2ViLVNoZWxsIjtpOjU2O3M6MTE6IkdIQyBNYW5hZ2VyIjtpOjU3O3M6MTQ6Ikdvb2cxZV9hbmFsaXN0IjtpOjU4O3M6MTM6IkdyaW5heSBHbzBvJEUiO2k6NTk7czoyOToiaDRudHUgc2hlbGwgW3Bvd2VyZWQgYnkgdHNvaV0iO2k6NjA7czoyNToiSGFja2VkIEJ5IERldnItaSBNZWZzZWRldCI7aTo2MTtzOjE3OiJIQUNLRUQgQlkgUkVBTFdBUiI7aTo2MjtzOjMyOiJIYWNrZXJsZXIgVnVydXIgTGFtZXJsZXIgU3VydW51ciI7aTo2MztzOjExOiJpTUhhQmlSTGlHaSI7aTo2NDtzOjk6IktBX3VTaGVsbCI7aTo2NTtzOjc6IkxpejB6aU0iO2k6NjY7czoxMToiTG9jdXM3U2hlbGwiO2k6Njc7czozNjoiTW9yb2NjYW4gU3BhbWVycyBNYS1FZGl0aW9OIEJ5IEdoT3NUIjtpOjY4O3M6MTA6Ik1hdGFtdSBNYXQiO2k6Njk7czo1MDoiT3BlbiB0aGUgZmlsZSBhdHRhY2htZW50IGlmIGFueSwgYW5kIGJhc2U2NF9lbmNvZGUiO2k6NzA7czo2OiJtMHJ0aXgiO2k6NzE7czo1OiJtMGh6ZSI7aTo3MjtzOjEwOiJNYXRhbXUgTWF0IjtpOjczO3M6MTY6Ik1vcm9jY2FuIFNwYW1lcnMiO2k6NzQ7czoxNToiJE15U2hlbGxWZXJzaW9uIjtpOjc1O3M6OToiTXlTUUwgUlNUIjtpOjc2O3M6MTk6Ik15U1FMIFdlYiBJbnRlcmZhY2UiO2k6Nzc7czoyNzoiTXlTUUwgV2ViIEludGVyZmFjZSBWZXJzaW9uIjtpOjc4O3M6MTQ6Ik15U1FMIFdlYnNoZWxsIjtpOjc5O3M6ODoiTjN0c2hlbGwiO2k6ODA7czoxNjoiSGFja2VkIGJ5IFNpbHZlciI7aTo4MTtzOjc6Ik5lb0hhY2siO2k6ODI7czoxMDoiQnkgS3ltTGpuayI7aTo4MztzOjIxOiJOZXR3b3JrRmlsZU1hbmFnZXJQSFAiO2k6ODQ7czoyMDoiTklYIFJFTU9URSBXRUItU0hFTEwiO2k6ODU7czoyNjoiTyBCaVIgS1JBTCBUQUtMaVQgRURpbEVNRVoiO2k6ODY7czoxODoiUEhBTlRBU01BLSBOZVcgQ21EIjtpOjg3O3M6MjE6IlBJUkFURVMgQ1JFVyBXQVMgSEVSRSI7aTo4ODtzOjIxOiJhIHNpbXBsZSBwaHAgYmFja2Rvb3IiO2k6ODk7czoyMDoiTE9URlJFRSBQSFAgQmFja2Rvb3IiO2k6OTA7czozMToiTmV3cyBSZW1vdGUgUEhQIFNoZWxsIEluamVjdGlvbiI7aTo5MTtzOjk6IlBIUEphY2thbCI7aTo5MjtzOjIwOiJQSFAgSFZBIFNoZWxsIFNjcmlwdCI7aTo5MztzOjEzOiJwaHBSZW1vdGVWaWV3IjtpOjk0O3M6MzU6IlBIUCBTaGVsbCBpcyBhbmludGVyYWN0aXZlIFBIUC1wYWdlIjtpOjk1O3M6NjoiUEhWYXl2IjtpOjk2O3M6MjY6IlBQUyAxLjAgcGVybC1jZ2kgd2ViIHNoZWxsIjtpOjk3O3M6MjI6IlByZXNzIE9LIHRvIGVudGVyIHNpdGUiO2k6OTg7czoyMjoicHJpdmF0ZSBTaGVsbCBieSBtNHJjbyI7aTo5OTtzOjU6InIwbmluIjtpOjEwMDtzOjY6IlI1N1NxbCI7aToxMDE7czoxMzoicjU3c2hlbGxcLnBocCI7aToxMDI7czoxNToicmdvZGBzIHdlYnNoZWxsIjtpOjEwMztzOjIwOiJyZWFsYXV0aD1TdkJEODVkSU51MyI7aToxMDQ7czoxNjoiUnUyNFBvc3RXZWJTaGVsbCI7aToxMDU7czoyMToiS0Fkb3QgVW5pdmVyc2FsIFNoZWxsIjtpOjEwNjtzOjEwOiJDckB6eV9LaW5nIjtpOjEwNztzOjIwOiJTYWZlX01vZGUgQnlwYXNzIFBIUCI7aToxMDg7czoxNzoiU2FyYXNhT24gU2VydmljZXMiO2k6MTA5O3M6MjU6IlNpbXBsZSBQSFAgYmFja2Rvb3IgYnkgREsiO2k6MTEwO3M6MTk6IkctU2VjdXJpdHkgV2Vic2hlbGwiO2k6MTExO3M6MjU6IlNpbW9yZ2ggU2VjdXJpdHkgTWFnYXppbmUiO2k6MTEyO3M6MjA6IlNoZWxsIGJ5IE1hd2FyX0hpdGFtIjtpOjExMztzOjEzOiJTU0kgd2ViLXNoZWxsIjtpOjExNDtzOjExOiJTdG9ybTdTaGVsbCI7aToxMTU7czo5OiJUaGVfQmVLaVIiO2k6MTE2O3M6OToiVzNEIFNoZWxsIjtpOjExNztzOjEzOiJ3NGNrMW5nIHNoZWxsIjtpOjExODtzOjI4OiJkZXZlbG9wZWQgYnkgRGlnaXRhbCBPdXRjYXN0IjtpOjExOTtzOjMyOiJXYXRjaCBZb3VyIHN5c3RlbSBTaGFueSB3YXMgaGVyZSI7aToxMjA7czoxMjoiV2ViIFNoZWxsIGJ5IjtpOjEyMTtzOjEzOiJXU08yIFdlYnNoZWxsIjtpOjEyMjtzOjMzOiJOZXR3b3JrRmlsZU1hbmFnZXJQSFAgZm9yIGNoYW5uZWwiO2k6MTIzO3M6Mjc6IlNtYWxsIFBIUCBXZWIgU2hlbGwgYnkgWmFDbyI7aToxMjQ7czoxMDoiTXJsb29sLmV4ZSI7aToxMjU7czo2OiJTRW9ET1IiO2k6MTI2O3M6OToiTXIuSGlUbWFuIjtpOjEyNztzOjU6ImQzYn5YIjtpOjEyODtzOjE2OiJDb25uZWN0QmFja1NoZWxsIjtpOjEyOTtzOjEwOiJCWSBNTU5CT0JaIjtpOjEzMDtzOjI2OiJPTEI6UFJPRFVDVDpPTkxJTkVfQkFOS0lORyI7aToxMzE7czoxMDoiQzBkZXJ6LmNvbSI7aToxMzI7czo3OiJNckhhemVtIjtpOjEzMztzOjk6InYwbGQzbTBydCI7aToxMzQ7czo2OiJLIUxMM3IiO2k6MTM1O3M6MTA6IkRyLmFib2xhbGgiO2k6MTM2O3M6MzA6IiRyYW5kX3dyaXRhYmxlX2ZvbGRlcl9mdWxscGF0aCI7aToxMzc7czo4NDoiPHRleHRhcmVhIG5hbWU9XCJwaHBldlwiIHJvd3M9XCI1XCIgY29scz1cIjE1MFwiPiIuQCRfUE9TVFsncGhwZXYnXS4iPC90ZXh0YXJlYT48YnI+IjtpOjEzODtzOjE2OiJjOTlmdHBicnV0ZWNoZWNrIjtpOjEzOTtzOjk6IkJ5IFBzeWNoMCI7aToxNDA7czoxNzoiJGM5OXNoX3VwZGF0ZWZ1cmwiO2k6MTQxO3M6MTQ6InRlbXBfcjU3X3RhYmxlIjtpOjE0MjtzOjE3OiJhZG1pbkBzcHlncnVwLm9yZyI7aToxNDM7czo3OiJjYXN1czE1IjtpOjE0NDtzOjEzOiJXU0NSSVBULlNIRUxMIjtpOjE0NTtzOjQ3OiJFeGVjdXRlZCBjb21tYW5kOiA8Yj48Zm9udCBjb2xvcj0jZGNkY2RjPlskY21kXSI7aToxNDY7czoxMToiY3RzaGVsbC5waHAiO2k6MTQ3O3M6MTU6IkRYX0hlYWRlcl9kcmF3biI7aToxNDg7czo4NjoiY3JsZi4ndW5saW5rKCRuYW1lKTsnLiRjcmxmLidyZW5hbWUoIn4iLiRuYW1lLCAkbmFtZSk7Jy4kY3JsZi4ndW5saW5rKCJncnBfcmVwYWlyLnBocCIiO2k6MTQ5O3M6MTA1OiIvMHRWU0cvU3V2MFVyL2hhVVlBZG4zak1Rd2Jib2NHZmZBZUMyOUJOOXRtQmlKZFYxbGsrallEVTkyQzk0amR0RGlmK3hPWWpHNkNMaHgzMVVvOXg5L2VBV2dzQks2MGtLMm1Md3F6cWQiO2k6MTUwO3M6MTE1OiJtcHR5KCRfUE9TVFsndXInXSkpICRtb2RlIHw9IDA0MDA7IGlmICghZW1wdHkoJF9QT1NUWyd1dyddKSkgJG1vZGUgfD0gMDIwMDsgaWYgKCFlbXB0eSgkX1BPU1RbJ3V4J10pKSAkbW9kZSB8PSAwMTAwIjtpOjE1MTtzOjM3OiJrbGFzdmF5di5hc3A/eWVuaWRvc3lhPTwlPWFrdGlma2xhcyU+IjtpOjE1MjtzOjEyMjoibnQpKGRpc2tfdG90YWxfc3BhY2UoZ2V0Y3dkKCkpLygxMDI0KjEwMjQpKSAuICJNYiAiIC4gIkZyZWUgc3BhY2UgIiAuIChpbnQpKGRpc2tfZnJlZV9zcGFjZShnZXRjd2QoKSkvKDEwMjQqMTAyNCkpIC4gIk1iIDwiO2k6MTUzO3M6NzY6ImEgaHJlZj0iPD9lY2hvICIkZmlzdGlrLnBocD9kaXppbj0kZGl6aW4vLi4vIj8+IiBzdHlsZT0idGV4dC1kZWNvcmF0aW9uOiBub24iO2k6MTU0O3M6Mzg6IlJvb3RTaGVsbCEnKTtzZWxmLmxvY2F0aW9uLmhyZWY9J2h0dHA6IjtpOjE1NTtzOjkwOiI8JT1SZXF1ZXN0LlNlcnZlclZhcmlhYmxlcygic2NyaXB0X25hbWUiKSU+P0ZvbGRlclBhdGg9PCU9U2VydmVyLlVSTFBhdGhFbmNvZGUoRm9sZGVyLkRyaXYiO2k6MTU2O3M6MTYwOiJwcmludCgoaXNfcmVhZGFibGUoJGYpICYmIGlzX3dyaXRlYWJsZSgkZikpPyI8dHI+PHRkPiIudygxKS5iKCJSIi53KDEpLmZvbnQoJ3JlZCcsJ1JXJywzKSkudygxKTooKChpc19yZWFkYWJsZSgkZikpPyI8dHI+PHRkPiIudygxKS5iKCJSIikudyg0KToiIikuKChpc193cml0YWJsIjtpOjE1NztzOjE2MToiKCciJywnJnF1b3Q7JywkZm4pKS4nIjtkb2N1bWVudC5saXN0LnN1Ym1pdCgpO1wnPicuaHRtbHNwZWNpYWxjaGFycyhzdHJsZW4oJGZuKT5mb3JtYXQ/c3Vic3RyKCRmbiwwLGZvcm1hdC0zKS4nLi4uJzokZm4pLic8L2E+Jy5zdHJfcmVwZWF0KCcgJyxmb3JtYXQtc3RybGVuKCRmbikiO2k6MTU4O3M6MTE6InplaGlyaGFja2VyIjtpOjE1OTtzOjM5OiJKQCFWckAqJlJIUnd+Skx3Lkd8eGxobkxKfj8xLmJ3T2J4YlB8IVYiO2k6MTYwO3M6Mzk6IldTT3NldGNvb2tpZShtZDUoJF9TRVJWRVJbJ0hUVFBfSE9TVCddKSI7aToxNjE7czoxNDE6IjwvdGQ+PHRkIGlkPWZhPlsgPGEgdGl0bGU9XCJIb21lOiAnIi5odG1sc3BlY2lhbGNoYXJzKHN0cl9yZXBsYWNlKCJcIiwgJHNlcCwgZ2V0Y3dkKCkpKS4iJy5cIiBpZD1mYSBocmVmPVwiamF2YXNjcmlwdDpWaWV3RGlyKCciLnJhd3VybGVuY29kZSI7aToxNjI7czoxNjoiQ29udGVudC1UeXBlOiAkXyI7aToxNjM7czo4NjoiPG5vYnI+PGI+JGNkaXIkY2ZpbGU8L2I+ICgiLiRmaWxlWyJzaXplX3N0ciJdLiIpPC9ub2JyPjwvdGQ+PC90cj48Zm9ybSBuYW1lPWN1cnJfZmlsZT4iO2k6MTY0O3M6NDg6Indzb0V4KCd0YXIgY2Z6diAnIC4gZXNjYXBlc2hlbGxhcmcoJF9QT1NUWydwMiddKSI7aToxNjU7czoxNDI6IjVqYjIwaUtXOXlJSE4wY21semRISW9KSEpsWm1WeVpYSXNJbUZ3YjNKMElpa2diM0lnYzNSeWFYTjBjaWdrY21WbVpYSmxjaXdpYm1sbmJXRWlLU0J2Y2lCemRISnBjM1J5S0NSeVpXWmxjbVZ5TENKM1pXSmhiSFJoSWlrZ2IzSWdjM1J5YVhOMGNpZ2siO2k6MTY2O3M6NzY6IkxTMGdSSFZ0Y0ROa0lHSjVJRkJwY25Wc2FXNHVVRWhRSUZkbFluTm9NMnhzSUhZeExqQWdZekJrWldRZ1lua2djakJrY2pFZ09rdz0iO2k6MTY3O3M6NjU6ImlmIChlcmVnKCdeW1s6Ymxhbms6XV0qY2RbWzpibGFuazpdXSsoW147XSspJCcsICRjb21tYW5kLCAkcmVncykpIjtpOjE2ODtzOjQ2OiJyb3VuZCgwKzk4MzAuNCs5ODMwLjQrOTgzMC40Kzk4MzAuNCs5ODMwLjQpKT09IjtpOjE2OTtzOjEyOiJQSFBTSEVMTC5QSFAiO2k6MTcwO3M6MjA6IlNoZWxsIGJ5IE1hd2FyX0hpdGFtIjtpOjE3MTtzOjIyOiJwcml2YXRlIFNoZWxsIGJ5IG00cmNvIjtpOjE3MjtzOjEzOiJ3NGNrMW5nIHNoZWxsIjtpOjE3MztzOjIxOiJGYVRhTGlzVGlDel9GeCBGeDI5U2giO2k6MTc0O3M6NDI6Ildvcmtlcl9HZXRSZXBseUNvZGUoJG9wRGF0YVsncmVjdkJ1ZmZlciddKSI7aToxNzU7czo0MDoiJGZpbGVwYXRoPUByZWFscGF0aCgkX1BPU1RbJ2ZpbGVwYXRoJ10pOyI7aToxNzY7czo4ODoiJHJlZGlyZWN0VVJMPSdodHRwOi8vJy4kclNpdGUuJF9TRVJWRVJbJ1JFUVVFU1RfVVJJJ107aWYoaXNzZXQoJF9TRVJWRVJbJ0hUVFBfUkVGRVJFUiddKSI7aToxNzc7czoxNzoicmVuYW1lKCJ3c28ucGhwIiwiO2k6MTc4O3M6NTQ6IiRNZXNzYWdlU3ViamVjdCA9IGJhc2U2NF9kZWNvZGUoJF9QT1NUWyJtc2dzdWJqZWN0Il0pOyI7aToxNzk7czo0NDoiY29weSgkX0ZJTEVTW3hdW3RtcF9uYW1lXSwkX0ZJTEVTW3hdW25hbWVdKSkiO2k6MTgwO3M6NTg6IlNFTEVDVCAxIEZST00gbXlzcWwudXNlciBXSEVSRSBjb25jYXQoYHVzZXJgLCAnQCcsIGBob3N0YCkiO2k6MTgxO3M6MjE6IiFAJF9DT09LSUVbJHNlc3NkdF9rXSI7aToxODI7czo0ODoiJGE9KHN1YnN0cih1cmxlbmNvZGUocHJpbnRfcihhcnJheSgpLDEpKSw1LDEpLmMpIjtpOjE4MztzOjU2OiJ4aCAtcyAiL3Vzci9sb2NhbC9hcGFjaGUvc2Jpbi9odHRwZCAtRFNTTCIgLi9odHRwZCAtbSAkMSI7aToxODQ7czoxODoicHdkID4gR2VuZXJhc2kuZGlyIjtpOjE4NTtzOjEyOiJCUlVURUZPUkNJTkciO2k6MTg2O3M6MzE6IkNhdXRhbSBmaXNpZXJlbGUgZGUgY29uZmlndXJhcmUiO2k6MTg3O3M6MzI6IiRrYT0nPD8vL0JSRSc7JGtha2E9JGthLidBQ0svLz8+IjtpOjE4ODtzOjg1OiIkc3Viaj11cmxkZWNvZGUoJF9HRVRbJ3N1J10pOyRib2R5PXVybGRlY29kZSgkX0dFVFsnYm8nXSk7JHNkcz11cmxkZWNvZGUoJF9HRVRbJ3NkJ10pIjtpOjE4OTtzOjM5OiIkX19fXz1AZ3ppbmZsYXRlKCRfX19fKSl7aWYoaXNzZXQoJF9QT1MiO2k6MTkwO3M6Mzc6InBhc3N0aHJ1KGdldGVudigiSFRUUF9BQ0NFUFRfTEFOR1VBR0UiO2k6MTkxO3M6ODoiQXNtb2RldXMiO2k6MTkyO3M6NTA6ImZvcig7JHBhZGRyPWFjY2VwdChDTElFTlQsIFNFUlZFUik7Y2xvc2UgQ0xJRU5UKSB7IjtpOjE5MztzOjU5OiIkaXppbmxlcjI9c3Vic3RyKGJhc2VfY29udmVydChAZmlsZXBlcm1zKCRmbmFtZSksMTAsOCksLTQpOyI7aToxOTQ7czo0MjoiJGJhY2tkb29yLT5jY29weSgkY2ZpY2hpZXIsJGNkZXN0aW5hdGlvbik7IjtpOjE5NTtzOjIzOiJ7JHtwYXNzdGhydSgkY21kKX19PGJyPiI7aToxOTY7czoyOToiJGFbaGl0c10nKTsgXHJcbiNlbmRxdWVyeVxyXG4iO2k6MTk3O3M6MjY6Im5jZnRwcHV0IC11ICRmdHBfdXNlcl9uYW1lIjtpOjE5ODtzOjM2OiJleGVjbCgiL2Jpbi9zaCIsInNoIiwiLWkiLChjaGFyKikwKTsiO2k6MTk5O3M6MzE6IjxIVE1MPjxIRUFEPjxUSVRMRT5jZ2ktc2hlbGwucHkiO2k6MjAwO3M6Mzg6InN5c3RlbSgidW5zZXQgSElTVEZJTEU7IHVuc2V0IFNBVkVISVNUIjtpOjIwMTtzOjIzOiIkbG9naW49QHBvc2l4X2dldHVpZCgpOyI7aToyMDI7czo2MDoiKGVyZWcoJ15bWzpibGFuazpdXSpjZFtbOmJsYW5rOl1dKiQnLCAkX1JFUVVFU1RbJ2NvbW1hbmQnXSkpIjtpOjIwMztzOjI1OiIhJF9SRVFVRVNUWyJjOTlzaF9zdXJsIl0pIjtpOjIwNDtzOjUzOiJQblZsa1dNNjMhQCNAJmRLeH5uTURXTX5Efy9Fc25+eH82REAjQCZQfn4sP25ZLFdQe1BvaiI7aToyMDU7czozNjoic2hlbGxfZXhlYygkX1BPU1RbJ2NtZCddIC4gIiAyPiYxIik7IjtpOjIwNjtzOjM1OiJpZighJHdob2FtaSkkd2hvYW1pPWV4ZWMoIndob2FtaSIpOyI7aToyMDc7czo2MToiUHlTeXN0ZW1TdGF0ZS5pbml0aWFsaXplKFN5c3RlbS5nZXRQcm9wZXJ0aWVzKCksIG51bGwsIGFyZ3YpOyI7aToyMDg7czozNjoiPCU9ZW52LnF1ZXJ5SGFzaHRhYmxlKCJ1c2VyLm5hbWUiKSU+IjtpOjIwOTtzOjgzOiJpZiAoZW1wdHkoJF9QT1NUWyd3c2VyJ10pKSB7JHdzZXIgPSAid2hvaXMucmlwZS5uZXQiO30gZWxzZSAkd3NlciA9ICRfUE9TVFsnd3NlciddOyI7aToyMTA7czo5MToiaWYgKG1vdmVfdXBsb2FkZWRfZmlsZSgkX0ZJTEVTWydmaWxhJ11bJ3RtcF9uYW1lJ10sICRjdXJkaXIuIi8iLiRfRklMRVNbJ2ZpbGEnXVsnbmFtZSddKSkgeyI7aToyMTE7czoyMzoic2hlbGxfZXhlYygndW5hbWUgLWEnKTsiO2k6MjEyO3M6NDc6ImlmICghZGVmaW5lZCRwYXJhbXtjbWR9KXskcGFyYW17Y21kfT0ibHMgLWxhIn07IjtpOjIxMztzOjYwOiJpZihnZXRfbWFnaWNfcXVvdGVzX2dwYygpKSRzaGVsbE91dD1zdHJpcHNsYXNoZXMoJHNoZWxsT3V0KTsiO2k6MjE0O3M6ODQ6IjxhIGhyZWY9JyRQSFBfU0VMRj9hY3Rpb249dmlld1NjaGVtYSZkYm5hbWU9JGRibmFtZSZ0YWJsZW5hbWU9JHRhYmxlbmFtZSc+U2NoZW1hPC9hPiI7aToyMTU7czo2NjoicGFzc3RocnUoICRiaW5kaXIuIm15c3FsZHVtcCAtLXVzZXI9JFVTRVJOQU1FIC0tcGFzc3dvcmQ9JFBBU1NXT1JEIjtpOjIxNjtzOjY2OiJteXNxbF9xdWVyeSgiQ1JFQVRFIFRBQkxFIGB4cGxvaXRgIChgeHBsb2l0YCBMT05HQkxPQiBOT1QgTlVMTCkiKTsiO2k6MjE3O3M6ODc6IiRyYTQ0ICA9IHJhbmQoMSw5OTk5OSk7JHNqOTggPSAic2gtJHJhNDQiOyRtbCA9ICIkc2Q5OCI7JGE1ID0gJF9TRVJWRVJbJ0hUVFBfUkVGRVJFUiddOyI7aToyMTg7czo1MjoiJF9GSUxFU1sncHJvYmUnXVsnc2l6ZSddLCAkX0ZJTEVTWydwcm9iZSddWyd0eXBlJ10pOyI7aToyMTk7czo3MToic3lzdGVtKCIkY21kIDE+IC90bXAvY21kdGVtcCAyPiYxOyBjYXQgL3RtcC9jbWR0ZW1wOyBybSAvdG1wL2NtZHRlbXAiKTsiO2k6MjIwO3M6Njk6In0gZWxzaWYgKCRzZXJ2YXJnID1+IC9eXDooLis/KVwhKC4rPylcQCguKz8pIFBSSVZNU0cgKC4rPykgXDooLispLykgeyI7aToyMjE7czo2OToic2VuZChTT0NLNSwgJG1zZywgMCwgc29ja2FkZHJfaW4oJHBvcnRhLCAkaWFkZHIpKSBhbmQgJHBhY290ZXN7b30rKzs7IjtpOjIyMjtzOjE4OiIkZmUoIiRjbWQgIDI+JjEiKTsiO2k6MjIzO3M6Njg6IndoaWxlICgkcm93ID0gbXlzcWxfZmV0Y2hfYXJyYXkoJHJlc3VsdCxNWVNRTF9BU1NPQykpIHByaW50X3IoJHJvdyk7IjtpOjIyNDtzOjUyOiJlbHNlaWYoQGlzX3dyaXRhYmxlKCRGTikgJiYgQGlzX2ZpbGUoJEZOKSkgJHRtcE91dE1GIjtpOjIyNTtzOjcyOiJjb25uZWN0KFNPQ0tFVCwgc29ja2FkZHJfaW4oJEFSR1ZbMV0sIGluZXRfYXRvbigkQVJHVlswXSkpKSBvciBkaWUgcHJpbnQiO2k6MjI2O3M6ODk6ImlmKG1vdmVfdXBsb2FkZWRfZmlsZSgkX0ZJTEVTWyJmaWMiXVsidG1wX25hbWUiXSxnb29kX2xpbmsoIi4vIi4kX0ZJTEVTWyJmaWMiXVsibmFtZSJdKSkpIjtpOjIyNztzOjg3OiJVTklPTiBTRUxFQ1QgJzAnICwgJzw/IHN5c3RlbShcJF9HRVRbY3BjXSk7ZXhpdDsgPz4nICwwICwwICwwICwwIElOVE8gT1VURklMRSAnJG91dGZpbGUiO2k6MjI4O3M6Njg6ImlmICghQGlzX2xpbmsoJGZpbGUpICYmICgkciA9IHJlYWxwYXRoKCRmaWxlKSkgIT0gRkFMU0UpICRmaWxlID0gJHI7IjtpOjIyOTtzOjI5OiJlY2hvICJGSUxFIFVQTE9BREVEIFRPICRkZXoiOyI7aToyMzA7czoyNDoiJGZ1bmN0aW9uKCRfUE9TVFsnY21kJ10pIjtpOjIzMTtzOjM4OiIkZmlsZW5hbWUgPSAkYmFja3Vwc3RyaW5nLiIkZmlsZW5hbWUiOyI7aToyMzI7czo0ODoiaWYoJyc9PSgkZGY9QGluaV9nZXQoJ2Rpc2FibGVfZnVuY3Rpb25zJykpKXtlY2hvIjtpOjIzMztzOjQ2OiI8JSBGb3IgRWFjaCBWYXJzIEluIFJlcXVlc3QuU2VydmVyVmFyaWFibGVzICU+IjtpOjIzNDtzOjMzOiJpZiAoJGZ1bmNhcmcgPX4gL15wb3J0c2NhbiAoLiopLykiO2k6MjM1O3M6NTU6IiR1cGxvYWRmaWxlID0gJHJwYXRoLiIvIiAuICRfRklMRVNbJ3VzZXJmaWxlJ11bJ25hbWUnXTsiO2k6MjM2O3M6MjY6IiRjbWQgPSAoJF9SRVFVRVNUWydjbWQnXSk7IjtpOjIzNztzOjM4OiJpZigkY21kICE9ICIiKSBwcmludCBTaGVsbF9FeGVjKCRjbWQpOyI7aToyMzg7czoyOToiaWYgKGlzX2ZpbGUoIi90bXAvJGVraW5jaSIpKXsiO2k6MjM5O3M6Njk6Il9fYWxsX18gPSBbIlNNVFBTZXJ2ZXIiLCJEZWJ1Z2dpbmdTZXJ2ZXIiLCJQdXJlUHJveHkiLCJNYWlsbWFuUHJveHkiXSI7aToyNDA7czo1OToiZ2xvYmFsICRteXNxbEhhbmRsZSwgJGRibmFtZSwgJHRhYmxlbmFtZSwgJG9sZF9uYW1lLCAkbmFtZSwiO2k6MjQxO3M6Mjc6IjI+JjEgMT4mMiIgOiAiIDE+JjEgMj4mMSIpOyI7aToyNDI7czo1MjoibWFwIHsgcmVhZF9zaGVsbCgkXykgfSAoJHNlbF9zaGVsbC0+Y2FuX3JlYWQoMC4wMSkpOyI7aToyNDM7czoyMjoiZndyaXRlICgkZnAsICIkeWF6aSIpOyI7aToyNDQ7czo1MToiU2VuZCB0aGlzIGZpbGU6IDxJTlBVVCBOQU1FPSJ1c2VyZmlsZSIgVFlQRT0iZmlsZSI+IjtpOjI0NTtzOjQyOiIkZGJfZCA9IEBteXNxbF9zZWxlY3RfZGIoJGRhdGFiYXNlLCRjb24xKTsiO2k6MjQ2O3M6Njc6ImZvciAoJHZhbHVlKSB7IHMvJi8mYW1wOy9nOyBzLzwvJmx0Oy9nOyBzLz4vJmd0Oy9nOyBzLyIvJnF1b3Q7L2c7IH0iO2k6MjQ3O3M6NzQ6ImNvcHkoJF9GSUxFU1sndXBrayddWyd0bXBfbmFtZSddLCJray8iLmJhc2VuYW1lKCRfRklMRVNbJ3Vwa2snXVsnbmFtZSddKSk7IjtpOjI0ODtzOjg2OiJmdW5jdGlvbiBnb29nbGVfYm90KCkgeyRzVXNlckFnZW50ID0gc3RydG9sb3dlcigkX1NFUlZFUlsnSFRUUF9VU0VSX0FHRU5UJ10pO2lmKCEoc3RycCI7aToyNDk7czo3NToiY3JlYXRlX2Z1bmN0aW9uKCImJCIuImZ1bmN0aW9uIiwiJCIuImZ1bmN0aW9uID0gY2hyKG9yZCgkIi4iZnVuY3Rpb24pLTMpOyIpIjtpOjI1MDtzOjQ2OiJsb25nIGludDp0KDAsMyk9cigwLDMpOy0yMTQ3NDgzNjQ4OzIxNDc0ODM2NDc7IjtpOjI1MTtzOjQ2OiI/dXJsPScuJF9TRVJWRVJbJ0hUVFBfSE9TVCddKS51bmxpbmsoUk9PVF9ESVIuIjtpOjI1MjtzOjM2OiJjYXQgJHtibGtsb2dbMl19IHwgZ3JlcCAicm9vdDp4OjA6MCIiO2k6MjUzO3M6OTc6IkBwYXRoMT0oJ2FkbWluLycsJ2FkbWluaXN0cmF0b3IvJywnbW9kZXJhdG9yLycsJ3dlYmFkbWluLycsJ2FkbWluYXJlYS8nLCdiYi1hZG1pbi8nLCdhZG1pbkxvZ2luLyciO2k6MjU0O3M6ODc6IiJhZG1pbjEucGhwIiwgImFkbWluMS5odG1sIiwgImFkbWluMi5waHAiLCAiYWRtaW4yLmh0bWwiLCAieW9uZXRpbS5waHAiLCAieW9uZXRpbS5odG1sIiI7aToyNTU7czo2ODoiUE9TVCB7JHBhdGh9eyRjb25uZWN0b3J9P0NvbW1hbmQ9RmlsZVVwbG9hZCZUeXBlPUZpbGUmQ3VycmVudEZvbGRlcj0iO2k6MjU2O3M6MzA6IkBhc3NlcnQoJF9SRVFVRVNUWydQSFBTRVNTSUQnXSI7aToyNTc7czo2MToiJHByb2Q9InN5Ii4icyIuInRlbSI7JGlkPSRwcm9kKCRfUkVRVUVTVFsncHJvZHVjdCddKTskeydpZCd9OyI7aToyNTg7czoxNToicGhwICIuJHdzb19wYXRoIjtpOjI1OTtzOjc3OiIkRmNobW9kLCRGZGF0YSwkT3B0aW9ucywkQWN0aW9uLCRoZGRhbGwsJGhkZGZyZWUsJGhkZHByb2MsJHVuYW1lLCRpZGQpOnNoYXJlZCI7aToyNjA7czo1MToic2VydmVyLjwvcD5cclxuPC9ib2R5PjwvaHRtbD4iO2V4aXQ7fWlmKHByZWdfbWF0Y2goIjtpOjI2MTtzOjk1OiIkZmlsZSA9ICRfRklMRVNbImZpbGVuYW1lIl1bIm5hbWUiXTsgZWNobyAiPGEgaHJlZj1cIiRmaWxlXCI+JGZpbGU8L2E+Ijt9IGVsc2Uge2VjaG8oImVtcHR5Iik7fSI7aToyNjI7czo2MDoiRlNfY2hrX2Z1bmNfbGliYz0oICQocmVhZGVsZiAtcyAkRlNfbGliYyB8IGdyZXAgX2Noa0BAIHwgYXdrIjtpOjI2MztzOjQwOiJmaW5kIC8gLW5hbWUgLnNzaCA+ICRkaXIvc3Noa2V5cy9zc2hrZXlzIjtpOjI2NDtzOjMzOiJyZS5maW5kYWxsKGRpcnQrJyguKiknLHByb2dubSlbMF0iO2k6MjY1O3M6NjA6Im91dHN0ciArPSBzdHJpbmcuRm9ybWF0KCI8YSBocmVmPSc/ZmRpcj17MH0nPnsxfS88L2E+Jm5ic3A7IiI7aToyNjY7czo4MzoiPCU9UmVxdWVzdC5TZXJ2ZXJ2YXJpYWJsZXMoIlNDUklQVF9OQU1FIiklPj90eHRwYXRoPTwlPVJlcXVlc3QuUXVlcnlTdHJpbmcoInR4dHBhdGgiO2k6MjY3O3M6NzE6IlJlc3BvbnNlLldyaXRlKFNlcnZlci5IdG1sRW5jb2RlKHRoaXMuRXhlY3V0ZUNvbW1hbmQodHh0Q29tbWFuZC5UZXh0KSkpIjtpOjI2ODtzOjExMToibmV3IEZpbGVTdHJlYW0oUGF0aC5Db21iaW5lKGZpbGVJbmZvLkRpcmVjdG9yeU5hbWUsIFBhdGguR2V0RmlsZU5hbWUoaHR0cFBvc3RlZEZpbGUuRmlsZU5hbWUpKSwgRmlsZU1vZGUuQ3JlYXRlIjtpOjI2OTtzOjkwOiJSZXNwb25zZS5Xcml0ZSgiPGJyPiggKSA8YSBocmVmPT90eXBlPTEmZmlsZT0iICYgc2VydmVyLlVSTGVuY29kZShpdGVtLnBhdGgpICYgIlw+IiAmIGl0ZW0iO2k6MjcwO3M6MTA0OiJzcWxDb21tYW5kLlBhcmFtZXRlcnMuQWRkKCgoVGFibGVDZWxsKWRhdGFHcmlkSXRlbS5Db250cm9sc1swXSkuVGV4dCwgU3FsRGJUeXBlLkRlY2ltYWwpLlZhbHVlID0gZGVjaW1hbCI7aToyNzE7czo2NDoiPCU9ICJcIiAmIG9TY3JpcHROZXQuQ29tcHV0ZXJOYW1lICYgIlwiICYgb1NjcmlwdE5ldC5Vc2VyTmFtZSAlPiI7aToyNzI7czo1MDoiY3VybF9zZXRvcHQoJGNoLCBDVVJMT1BUX1VSTCwgImh0dHA6Ly8kaG9zdDoyMDgyIikiO2k6MjczO3M6NTg6IkhKM0hqdXRja29SZnBYZjlBMXpRTzJBd0RSclJleTl1R3ZUZWV6NzlxQWFvMWEwcmd1ZGtaa1I4UmEiO2k6Mjc0O3M6MzE6IiRpbmlbJ3VzZXJzJ10gPSBhcnJheSgncm9vdCcgPT4iO2k6Mjc1O3M6MzE6ImZ3cml0ZSgkZnAsIlx4RUZceEJCXHhCRiIuJGJvZHkiO2k6Mjc2O3M6MTg6InByb2Nfb3BlbignSUhTdGVhbSI7aToyNzc7czoyNDoiJGJhc2xpaz0kX1BPU1RbJ2Jhc2xpayddIjtpOjI3ODtzOjMwOiJmcmVhZCgkZnAsIGZpbGVzaXplKCRmaWNoZXJvKSkiO2k6Mjc5O3M6Mzk6IkkvZ2NaL3ZYMEExMEREUkRnN0V6ay9kKzMrOHF2cXFTMUswK0FYWSI7aToyODA7czoxNjoieyRfUE9TVFsncm9vdCddfSI7aToyODE7czoyOToifWVsc2VpZigkX0dFVFsncGFnZSddPT0nZGRvcyciO2k6MjgyO3M6MTQ6IlRoZSBEYXJrIFJhdmVyIjtpOjI4MztzOjM5OiIkdmFsdWUgPX4gcy8lKC4uKS9wYWNrKCdjJyxoZXgoJDEpKS9lZzsiO2k6Mjg0O3M6MTE6Ind3dy50MHMub3JnIjtpOjI4NTtzOjMwOiJ1bmxlc3Mob3BlbihQRkQsJGdfdXBsb2FkX2RiKSkiO2k6Mjg2O3M6MTI6ImF6ODhwaXgwMHE5OCI7aToyODc7czoxMToic2ggZ28gJDEuJHgiO2k6Mjg4O3M6MjY6InN5c3RlbSgicGhwIC1mIHhwbCAkaG9zdCIpIjtpOjI4OTtzOjEzOiJleHBsb2l0Y29va2llIjtpOjI5MDtzOjIxOiI4MCAtYiAkMSAtaSBldGgwIC1zIDgiO2k6MjkxO3M6MjU6IkhUVFAgZmxvb2QgY29tcGxldGUgYWZ0ZXIiO2k6MjkyO3M6MTU6Ik5JR0dFUlMuTklHR0VSUyI7aToyOTM7czo0NzoiaWYoaXNzZXQoJF9HRVRbJ2hvc3QnXSkmJmlzc2V0KCRfR0VUWyd0aW1lJ10pKXsiO2k6Mjk0O3M6ODM6InN1YnByb2Nlc3MuUG9wZW4oY21kLCBzaGVsbCA9IFRydWUsIHN0ZG91dD1zdWJwcm9jZXNzLlBJUEUsIHN0ZGVycj1zdWJwcm9jZXNzLlNURE9VIjtpOjI5NTtzOjY5OiJkZWYgZGFlbW9uKHN0ZGluPScvZGV2L251bGwnLCBzdGRvdXQ9Jy9kZXYvbnVsbCcsIHN0ZGVycj0nL2Rldi9udWxsJykiO2k6Mjk2O3M6Njc6InByaW50KCJbIV0gSG9zdDogIiArIGhvc3RuYW1lICsgIiBtaWdodCBiZSBkb3duIVxuWyFdIFJlc3BvbnNlIENvZGUiO2k6Mjk3O3M6NDI6ImNvbm5lY3Rpb24uc2VuZCgic2hlbGwgIitzdHIob3MuZ2V0Y3dkKCkpKyI7aToyOTg7czo1MDoib3Muc3lzdGVtKCdlY2hvIGFsaWFzIGxzPSIubHMuYmFzaCIgPj4gfi8uYmFzaHJjJykiO2k6Mjk5O3M6MzI6InJ1bGVfcmVxID0gcmF3X2lucHV0KCJTb3VyY2VGaXJlIjtpOjMwMDtzOjU3OiJhcmdwYXJzZS5Bcmd1bWVudFBhcnNlcihkZXNjcmlwdGlvbj1oZWxwLCBwcm9nPSJzY3R1bm5lbCIiO2k6MzAxO3M6NTc6InN1YnByb2Nlc3MuUG9wZW4oJyVzZ2RiIC1wICVkIC1iYXRjaCAlcycgJSAoZ2RiX3ByZWZpeCwgcCI7aTozMDI7czo1OToiJGZyYW1ld29yay5wbHVnaW5zLmxvYWQoIiN7cnBjdHlwZS5kb3duY2FzZX1ycGMiLCBvcHRzKS5ydW4iO2k6MzAzO3M6Mjg6ImlmIHNlbGYuaGFzaF90eXBlID09ICdwd2R1bXAiO2k6MzA0O3M6MTc6Iml0c29rbm9wcm9ibGVtYnJvIjtpOjMwNTtzOjQ1OiJhZGRfZmlsdGVyKCd0aGVfY29udGVudCcsICdfYmxvZ2luZm8nLCAxMDAwMSkiO2k6MzA2O3M6OToiPHN0ZGxpYi5oIjtpOjMwNztzOjU5OiJlY2hvIHkgOyBzbGVlcCAxIDsgfSB8IHsgd2hpbGUgcmVhZCA7IGRvIGVjaG8geiRSRVBMWTsgZG9uZSI7aTozMDg7czoxMToiVk9CUkEgR0FOR08iO2k6MzA5O3M6NzY6ImludDMyKCgoJHogPj4gNSAmIDB4MDdmZmZmZmYpIF4gJHkgPDwgMikgKyAoKCR5ID4+IDMgJiAweDFmZmZmZmZmKSBeICR6IDw8IDQiO2k6MzEwO3M6Njk6IkBjb3B5KCRfRklMRVNbZmlsZU1hc3NdW3RtcF9uYW1lXSwkX1BPU1RbcGF0aF0uJF9GSUxFU1tmaWxlTWFzc11bbmFtZSI7aTozMTE7czo0NjoiZmluZF9kaXJzKCRncmFuZHBhcmVudF9kaXIsICRsZXZlbCwgMSwgJGRpcnMpOyI7aTozMTI7czoyODoiQHNldGNvb2tpZSgiaGl0IiwgMSwgdGltZSgpKyI7aTozMTM7czo1OiJlLyouLyI7aTozMTQ7czozNzoiSkhacGMybDBZMjkxYm5RZ1BTQWtTRlJVVUY5RFQwOUxTVVZmViI7aTozMTU7czozNToiMGQwYTBkMGE2NzZjNmY2MjYxNmMyMDI0NmQ3OTVmNzM2ZDciO2k6MzE2O3M6MTk6ImZvcGVuKCcvZXRjL3Bhc3N3ZCciO2k6MzE3O3M6NzY6IiR0c3UyW3JhbmQoMCxjb3VudCgkdHN1MikgLSAxKV0uJHRzdTFbcmFuZCgwLGNvdW50KCR0c3UxKSAtIDEpXS4kdHN1MltyYW5kKDAiO2k6MzE4O3M6MzM6Ii91c3IvbG9jYWwvYXBhY2hlL2Jpbi9odHRwZCAtRFNTTCI7aTozMTk7czoyMDoic2V0IHByb3RlY3QtdGVsbmV0IDAiO2k6MzIwO3M6Mjc6ImF5dSBwcjEgcHIyIHByMyBwcjQgcHI1IHByNiI7aTozMjE7czozMDoiYmluZCBmaWx0IC0gIlwwMDFBQ1RJT04gKlwwMDEiIjtpOjMyMjtzOjUwOiJyZWdzdWIgLWFsbCAtLSAsIFtzdHJpbmcgdG9sb3dlciAkb3duZXJdICIiIG93bmVycyI7aTozMjM7czozNToia2lsbCAtQ0hMRCBcJGJvdHBpZCA+L2Rldi9udWxsIDI+JjEiO2k6MzI0O3M6MTA6ImJpbmQgZGNjIC0iO2k6MzI1O3M6MjQ6InI0YVRjLmRQbnRFL2Z6dFNGMWJIM1JIMCI7aTozMjY7czoxMzoicHJpdm1zZyAkY2hhbiI7aTozMjc7czoyMjoiYmluZCBqb2luIC0gKiBnb3Bfam9pbiI7aTozMjg7czo0Mzoic2V0IGdvb2dsZShkYXRhKSBbaHR0cDo6ZGF0YSAkZ29vZ2xlKHBhZ2UpXSI7aTozMjk7czoyNjoicHJvYyBodHRwOjpDb25uZWN0IHt0b2tlbn0iO2k6MzMwO3M6MTM6InByaXZtc2cgJG5pY2siO2k6MzMxO3M6MTE6InB1dGJvdCAkYm90IjtpOjMzMjtzOjEyOiJ1bmJpbmQgUkFXIC0iO2k6MzMzO3M6Mjk6Ii0tRENDRElSIFtsaW5kZXggJFVzZXIoJGkpIDJdIjtpOjMzNDtzOjEwOiJDeWJlc3RlcjkwIjtpOjMzNTtzOjQxOiJmaWxlX2dldF9jb250ZW50cyh0cmltKCRmWyRfR0VUWydpZCddXSkpOyI7aTozMzY7czoyMToidW5saW5rKCR3cml0YWJsZV9kaXJzIjtpOjMzNztzOjI3OiJiYXNlNjRfZGVjb2RlKCRjb2RlX3NjcmlwdCkiO2k6MzM4O3M6MjE6Imx1Y2lmZmVyQGx1Y2lmZmVyLm9yZyI7aTozMzk7czo0ODoiJHRoaXMtPkYtPkdldENvbnRyb2xsZXIoJF9TRVJWRVJbJ1JFUVVFU1RfVVJJJ10pIjtpOjM0MDtzOjQ3OiIkdGltZV9zdGFydGVkLiRzZWN1cmVfc2Vzc2lvbl91c2VyLnNlc3Npb25faWQoKSI7aTozNDE7czo3NDoiJHBhcmFtIHggJG4uc3Vic3RyICgkcGFyYW0sIGxlbmd0aCgkcGFyYW0pIC0gbGVuZ3RoKCRjb2RlKSVsZW5ndGgoJHBhcmFtKSkiO2k6MzQyO3M6MzY6ImZ3cml0ZSgkZixnZXRfZG93bmxvYWQoJF9HRVRbJ3VybCddKSI7aTozNDM7czo2NToiaHR0cDovLycuJF9TRVJWRVJbJ0hUVFBfSE9TVCddLnVybGRlY29kZSgkX1NFUlZFUlsnUkVRVUVTVF9VUkknXSkiO2k6MzQ0O3M6ODA6IndwX3Bvc3RzIFdIRVJFIHBvc3RfdHlwZSA9ICdwb3N0JyBBTkQgcG9zdF9zdGF0dXMgPSAncHVibGlzaCcgT1JERVIgQlkgYElEYCBERVNDIjtpOjM0NTtzOjM3OiIkdXJsID0gJHVybHNbcmFuZCgwLCBjb3VudCgkdXJscyktMSldIjtpOjM0NjtzOjQ3OiJwcmVnX21hdGNoKCcvKD88PVJld3JpdGVSdWxlKS4qKD89XFtMXCxSXD0zMDJcXSI7aTozNDc7czo0NToicHJlZ19tYXRjaCgnIU1JRFB8V0FQfFdpbmRvd3MuQ0V8UFBDfFNlcmllczYwIjtpOjM0ODtzOjYwOiJSMGxHT0RsaEV3QVFBTE1BQUFBQUFQLy8vNXljQU03T1kvLy9uUC8venYvT25QZjM5Ly8vL3dBQUFBQUEiO2k6MzQ5O3M6NjU6InN0cl9yb3QxMygkYmFzZWFbKCRkaW1lbnNpb24qJGRpbWVuc2lvbi0xKSAtICgkaSokZGltZW5zaW9uKyRqKV0pIjtpOjM1MDtzOjc1OiJpZihlbXB0eSgkX0dFVFsnemlwJ10pIGFuZCBlbXB0eSgkX0dFVFsnZG93bmxvYWQnXSkgJiBlbXB0eSgkX0dFVFsnaW1nJ10pKXsiO2k6MzUxO3M6MTY6Ik1hZGUgYnkgRGVsb3JlYW4iO2k6MzUyO3M6NDY6Im92ZXJmbG93LXk6c2Nyb2xsO1wiPiIuJGxpbmtzLiRodG1sX21mWydib2R5J10iO2k6MzUzO3M6NDM6ImZ1bmN0aW9uIHVybEdldENvbnRlbnRzKCR1cmwsICR0aW1lb3V0ID0gNSkiO2k6MzU0O3M6NjoiZDNsZXRlIjtpOjM1NTtzOjE1OiJsZXRha3Nla2FyYW5nKCkiO2k6MzU2O3M6ODoiWUVOSTNFUkkiO2k6MzU3O3M6MjE6IiRPT08wMDAwMDA9dXJsZGVjb2RlKCI7aTozNTg7czoyMDoiLUkvdXNyL2xvY2FsL2JhbmRtaW4iO2k6MzU5O3M6Mzc6ImZ3cml0ZSgkZnBzZXR2LCBnZXRlbnYoIkhUVFBfQ09PS0lFIikiO2k6MzYwO3M6MjU6Imlzc2V0KCRfUE9TVFsnZXhlY2dhdGUnXSkiO2k6MzYxO3M6MTU6IldlYmNvbW1hbmRlciBhdCI7aTozNjI7czoxNDoiPT0gImJpbmRzaGVsbCIiO2k6MzYzO3M6ODoiUGFzaGtlbGEiO2k6MzY0O3M6MjU6ImNyZWF0ZUZpbGVzRm9ySW5wdXRPdXRwdXQiO2k6MzY1O3M6NjoiTTRsbDNyIjtpOjM2NjtzOjIwOiJfX1ZJRVdTVEFURUVOQ1JZUFRFRCI7aTozNjc7czo3OiJPb05fQm95IjtpOjM2ODtzOjEzOiJSZWFMX1B1TmlTaEVyIjtpOjM2OTtzOjg6ImRhcmttaW56IjtpOjM3MDtzOjU6IlplZDB4IjtpOjM3MTtzOjQwOiJhYmFjaG98YWJpemRpcmVjdG9yeXxhYm91dHxhY29vbnxhbGV4YW5hIjtpOjM3MjtzOjM2OiJwcGN8bWlkcHx3aW5kb3dzIGNlfG10a3xqMm1lfHN5bWJpYW4iO2k6MzczO3M6NDc6IkBjaHIoKCRoWyRlWyRvXV08PDQpKygkaFskZVsrKyRvXV0pKTt9fWV2YWwoJGQpIjtpOjM3NDtzOjExOiIkc2gzbGxDb2xvciI7aTozNzU7czoxMDoiUHVua2VyMkJvdCI7aTozNzY7czoxODoiPD9waHAgZWNobyAiIyEhIyI7IjtpOjM3NztzOjc1OiIkaW09c3Vic3RyKCRpbSwwLCRpKS5zdWJzdHIoJGltLCRpMisxLCRpNC0oJGkyKzEpKS5zdWJzdHIoJGltLCRpNCsxMixzdHJsZW4iO2k6Mzc4O3M6NTU6IigkaW5kYXRhLCRiNjQ9MSl7aWYoJGI2ND09MSl7JGNkPWJhc2U2NF9kZWNvZGUoJGluZGF0YSkiO2k6Mzc5O3M6MTc6IigkX1BPU1RbImRpciJdKSk7IjtpOjM4MDtzOjE3OiJIYWNrZWQgQnkgRW5ETGVTcyI7aTozODE7czoxMDoiYW5kZXh8b29nbCI7aTozODI7czoxMDoibmRyb2l8aHRjXyI7aTozODM7czoxMDoiPGRvdD5JcklzVCI7aTozODQ7czoyMToiN1AxdGQrTldsaWFJL2hXa1o0Vlg5IjtpOjM4NTtzOjE1OiJOaW5qYVZpcnVzIEhlcmUiO2k6Mzg2O3M6MzI6IiRpbT1zdWJzdHIoJHR4LCRwKzIsJHAyLSgkcCsyKSk7IjtpOjM4NztzOjY6IjN4cDFyMyI7aTozODg7czoyMDoiJG1kNT1tZDUoIiRyYW5kb20iKTsiO2k6Mzg5O3M6Mjg6Im9UYXQ4RDNEc0U4JyZ+aFUwNkNDSDU7JGdZU3EiO2k6MzkwO3M6MTI6IkdJRjg5QTs8P3BocCI7aTozOTE7czoxNToiQ3JlYXRlZCBCeSBFTU1BIjtpOjM5MjtzOjM0OiJQYXNzd29yZDo8cz4iLiRfUE9TVFs8cT5wYXNzd2Q8cT5dIjtpOjM5MztzOjE1OiJOZXRAZGRyZXNzIE1haWwiO2k6Mzk0O3M6MjQ6IiRpc2V2YWxmdW5jdGlvbmF2YWlsYWJsZSI7aTozOTU7czoxMToiQmFieV9EcmFrb24iO2k6Mzk2O3M6MzA6ImZ3cml0ZShmb3BlbihkaXJuYW1lKF9fRklMRV9fKSI7aTozOTc7czoxMzoiXV0pKTt9fWV2YWwoJCI7aTozOTg7czoyNzoiZXJlZ19yZXBsYWNlKDxxPiZlbWFpbCY8cT4sIjtpOjM5OTtzOjE5OiIpOyAkaSsrKSRyZXQuPWNocigkIjtpOjQwMDtzOjU3OiIkcGFyYW0ybWFzay4iKVw9W1w8cXE+XCJdKC4qPykoPz1bXDxxcT5cIl0gKVtcPHFxPlwiXS9zaWUiO2k6NDAxO3M6OToiLy9yYXN0YS8vIjtpOjQwMjtzOjIwOiI8IS0tQ09PS0lFIFVQREFURS0tPiI7aTo0MDM7czoxMzoicHJvZmV4b3IuaGVsbCI7aTo0MDQ7czoxMzoiTWFnZWxhbmdDeWJlciI7aTo0MDU7czo4OiJaT0JVR1RFTCI7aTo0MDY7czoxMzoiRmFrZVNlbmRlciBieSI7aTo0MDc7czoyMToiZGF0YTp0ZXh0L2h0bWw7YmFzZTY0IjtpOjQwODtzOjg6IlNfXUBfXlVeIjtpOjQwOTtzOjEzOiJAJF9QT1NUWyhjaHIoIjtpOjQxMDtzOjEyOiJaZXJvRGF5RXhpbGUiO2k6NDExO3M6MTI6IlN1bHRhbkhhaWthbCI7aTo0MTI7czoxMToiQ291cGRlZ3JhY2UiO2k6NDEzO3M6OToiYXJ0aWNrbGVAIjtpOjQxNDtzOjE1OiJnbml0cm9wZXJfcm9ycmUiO2k6NDE1O3M6MjM6ImN1dHRlclthdF1yZWFsLnhha2VwLnJ1IjtpOjQxNjtzOjI5OiJpZigkd3BfX3dwPUBnemluZmxhdGUoJHdwX193cCI7aTo0MTc7czo2OiJyMDBuaXgiO2k6NDE4O3M6MjE6IiRmdWxsX3BhdGhfdG9fZG9vcndheSI7aTo0MTk7czozMDoiPGI+RG9uZSA9PT4gJHVzZXJmaWxlX25hbWU8L2I+IjtpOjQyMDtzOjEyOiI+RGFyayBTaGVsbDwiO2k6NDIxO3M6MTU6Ii8uLi8qL2luZGV4LnBocCI7aTo0MjI7czozMjoiaWYoaXNfdXBsb2FkZWRfZmlsZS8qOyovKCRfRklMRVMiO2k6NDIzO3M6MjM6ImV4ZWMoJGNvbW1hbmQsICRvdXRwdXQpIjtpOjQyNDtzOjIwOiJAaW5jbHVkZV9vbmNlKCcvdG1wLyI7aTo0MjU7czo4MToidHJpbSgnaHR0cDovLycuJHNjLjxxcT4/Q29tbWFuZD1HZXRGb2xkZXJzQW5kRmlsZXMmVHlwZT1GaWxlJkN1cnJlbnRGb2xkZXI9JTJGJTAwIjtpOjQyNjtzOjU5OiIkc2NyaXB0X2ZpbmQgPSBzdHJfcmVwbGFjZSgibG9hZGVyIiwgImZpbmQiLCAkc2NyaXB0X2xvYWRlciI7aTo0Mjc7czoxODoiPHRpdGxlPi4vSGFja2VkIEJ5IjtpOjQyODtzOjg6IkJ5IFRhM2VzIjtpOjQyOTtzOjU6InJhaHVpIjt9"));
 $gX_DBShe = unserialize(base64_decode("YTo2Mzp7aTowO3M6NzoiZGVmYWNlciI7aToxO3M6MjQ6IllvdSBjYW4gcHV0IGEgbWQ1IHN0cmluZyI7aToyO3M6ODoicGhwc2hlbGwiO2k6MztzOjYyOiI8ZGl2IGNsYXNzPSJibG9jayBidHlwZTEiPjxkaXYgY2xhc3M9ImR0b3AiPjxkaXYgY2xhc3M9ImRidG0iPiI7aTo0O3M6ODoiYzk5c2hlbGwiO2k6NTtzOjg6InI1N3NoZWxsIjtpOjY7czo3OiJOVERhZGR5IjtpOjc7czo4OiJjaWhzaGVsbCI7aTo4O3M6NzoiRnhjOTlzaCI7aTo5O3M6MTI6IldlYiBTaGVsbCBieSI7aToxMDtzOjExOiJkZXZpbHpTaGVsbCI7aToxMTtzOjI1OiJIYWNrZWQgYnkgQWxmYWJldG9WaXJ0dWFsIjtpOjEyO3M6ODoiTjN0c2hlbGwiO2k6MTM7czoxMToiU3Rvcm03U2hlbGwiO2k6MTQ7czoxMToiTG9jdXM3U2hlbGwiO2k6MTU7czoxMjoicjU3c2hlbGwucGhwIjtpOjE2O3M6OToiYW50aXNoZWxsIjtpOjE3O3M6OToicm9vdHNoZWxsIjtpOjE4O3M6MTE6Im15c2hlbGxleGVjIjtpOjE5O3M6ODoiU2hlbGwgT2siO2k6MjA7czoxNDoiZXhlYygicm0gLXIgLWYiO2k6MjE7czoxODoiTmUgdWRhbG9zIHphZ3J1eml0IjtpOjIyO3M6NTE6IiRtZXNzYWdlID0gZXJlZ19yZXBsYWNlKCIlNUMlMjIiLCAiJTIyIiwgJG1lc3NhZ2UpOyI7aToyMztzOjE5OiJwcmludCAiU3BhbWVkJz48YnI+IjtpOjI0O3M6NDA6InNldGNvb2tpZSggIm15c3FsX3dlYl9hZG1pbl91c2VybmFtZSIgKTsiO2k6MjU7czozNzoiZWxzZWlmKGZ1bmN0aW9uX2V4aXN0cygic2hlbGxfZXhlYyIpKSI7aToyNjtzOjU5OiJpZiAoaXNfY2FsbGFibGUoImV4ZWMiKSBhbmQgIWluX2FycmF5KCJleGVjIiwkZGlzYWJsZWZ1bmMpKSI7aToyNztzOjM0OiJpZiAoKCRwZXJtcyAmIDB4QzAwMCkgPT0gMHhDMDAwKSB7IjtpOjI4O3M6MTA6ImRpciAvT0cgL1giO2k6Mjk7czozNjoiaW5jbHVkZSgkX1NFUlZFUlsnSFRUUF9VU0VSX0FHRU5UJ10pIjtpOjMwO3M6NzoiYnIwd3MzciI7aTozMTtzOjQ5OiInaHR0cGQuY29uZicsJ3Zob3N0cy5jb25mJywnY2ZnLnBocCcsJ2NvbmZpZy5waHAnIjtpOjMyO3M6MzQ6Ii9wcm9jL3N5cy9rZXJuZWwveWFtYS9wdHJhY2Vfc2NvcGUiO2k6MzM7czoyMzoiZXZhbChmaWxlX2dldF9jb250ZW50cygiO2k6MzQ7czoxODoiaXNfd3JpdGFibGUoIi92YXIvIjtpOjM1O3M6MTQ6IiRHTE9CQUxTWydfX19fIjtpOjM2O3M6NTU6ImlzX2NhbGxhYmxlKCdleGVjJykgYW5kICFpbl9hcnJheSgnZXhlYycsICRkaXNhYmxlZnVuY3MiO2k6Mzc7czo2OiJrMGQuY2MiO2k6Mzg7czoyNjoiZ21haWwtc210cC1pbi5sLmdvb2dsZS5jb20iO2k6Mzk7czo3OiJ3ZWJyMDB0IjtpOjQwO3M6MTE6IkRldmlsSGFja2VyIjtpOjQxO3M6NzoiRGVmYWNlciI7aTo0MjtzOjExOiJbIFBocHJveHkgXSI7aTo0MztzOjg6Iltjb2RlcnpdIjtpOjQ0O3M6MzI6IjwhLS0jZXhlYyBjbWQ9IiRIVFRQX0FDQ0VQVCIgLS0+IjtpOjQ1O3M6MTI6Il1bcm91bmQoMCldKCI7aTo0NjtzOjExOiJTaW1BdHRhY2tlciI7aTo0NztzOjE1OiJEYXJrQ3Jld0ZyaWVuZHMiO2k6NDg7czo3OiJrMmxsMzNkIjtpOjQ5O3M6NzoiS2tLMTMzNyI7aTo1MDtzOjE1OiJIQUNLRUQgQlkgU1RPUk0iO2k6NTE7czoxNDoiTWV4aWNhbkhhY2tlcnMiO2k6NTI7czoxNToiTXIuU2hpbmNoYW5YMTk2IjtpOjUzO3M6OToiRGVpZGFyYX5YIjtpOjU0O3M6MTA6IkppbnBhbnRvbXoiO2k6NTU7czo5OiIxbjczY3QxMG4iO2k6NTY7czoxNDoiS2luZ1NrcnVwZWxsb3MiO2k6NTc7czoxMDoiSmlucGFudG9teiI7aTo1ODtzOjk6IkNlbmdpekhhbiI7aTo1OTtzOjk6InIzdjNuZzRucyI7aTo2MDtzOjk6IkJMQUNLVU5JWCI7aTo2MTtzOjk6ImFydGlja2xlQCI7aTo2MjtzOjg6IkZpbGVzTWFuIjt9"));
 $g_FlexDBShe = unserialize(base64_decode("YTozMzM6e2k6MDtzOjM1OiJkZWZhdWx0X2FjdGlvblxzKj1ccypcXFsnIl1GaWxlc01hbiI7aToxO3M6MzM6ImRlZmF1bHRfYWN0aW9uXHMqPVxzKlsnIl1GaWxlc01hbiI7aToyO3M6MTAwOiJJTzo6U29ja2V0OjpJTkVULT5uZXdcKFByb3RvXHMqPT5ccyoidGNwIlxzKixccypMb2NhbFBvcnRccyo9PlxzKjM2MDAwXHMqLFxzKkxpc3RlblxzKj0+XHMqU09NQVhDT05OIjtpOjM7czo5NjoiXCRfKEdFVHxQT1NUfFNFUlZFUnxDT09LSUV8UkVRVUVTVClcW1xzKlsnIl17MCwxfXAyWyciXXswLDF9XHMqXF1ccyo9PVxzKlsnIl17MCwxfWNobW9kWyciXXswLDF9IjtpOjQ7czoyMzoiQ2FwdGFpblxzK0NydW5jaFxzK1RlYW0iO2k6NTtzOjExOiJieVxzK0dyaW5heSI7aTo2O3M6MTk6ImhhY2tlZFxzK2J5XHMrSG1laTciO2k6NztzOjMzOiJzeXN0ZW1ccytmaWxlXHMrZG9ccytub3RccytkZWxldGUiO2k6ODtzOjE3MDoiXCRpbmZvIFwuPSBcKFwoXCRwZXJtc1xzKiZccyoweDAwNDBcKVxzKlw/XChcKFwkcGVybXNccyomXHMqMHgwODAwXClccypcP1xzKlxcWyciXXNcXFsnIl1ccyo6XHMqXFxbJyJdeFxcWyciXVxzKlwpXHMqOlwoXChcJHBlcm1zXHMqJlxzKjB4MDgwMFwpXHMqXD9ccyonUydccyo6XHMqJy0nXHMqXCkiO2k6OTtzOjc4OiJXU09zZXRjb29raWVccypcKFxzKm1kNVxzKlwoXHMqQCpcJF9TRVJWRVJcW1xzKlxcWyciXUhUVFBfSE9TVFxcWyciXVxzKlxdXHMqXCkiO2k6MTA7czo3NDoiV1NPc2V0Y29va2llXHMqXChccyptZDVccypcKFxzKkAqXCRfU0VSVkVSXFtccypbJyJdSFRUUF9IT1NUWyciXVxzKlxdXHMqXCkiO2k6MTE7czoxMDc6Indzb0V4XHMqXChccypcXFsnIl1ccyp0YXJccypjZnp2XHMqXFxbJyJdXHMqXC5ccyplc2NhcGVzaGVsbGFyZ1xzKlwoXHMqXCRfUE9TVFxbXHMqXFxbJyJdcDJcXFsnIl1ccypcXVxzKlwpIjtpOjEyO3M6NDA6ImV2YWxccypcKCpccypiYXNlNjRfZGVjb2RlXHMqXCgqXHMqQCpcJF8iO2k6MTM7czo3ODoiZmlsZXBhdGhccyo9XHMqQCpyZWFscGF0aFxzKlwoXHMqXCRfUE9TVFxzKlxbXHMqXFxbJyJdZmlsZXBhdGhcXFsnIl1ccypcXVxzKlwpIjtpOjE0O3M6NzQ6ImZpbGVwYXRoXHMqPVxzKkAqcmVhbHBhdGhccypcKFxzKlwkX1BPU1RccypcW1xzKlsnIl1maWxlcGF0aFsnIl1ccypcXVxzKlwpIjtpOjE1O3M6NDc6InJlbmFtZVxzKlwoXHMqXHMqWyciXXswLDF9d3NvXC5waHBbJyJdezAsMX1ccyosIjtpOjE2O3M6OTc6IlwkTWVzc2FnZVN1YmplY3Rccyo9XHMqYmFzZTY0X2RlY29kZVxzKlwoXHMqXCRfUE9TVFxzKlxbXHMqWyciXXswLDF9bXNnc3ViamVjdFsnIl17MCwxfVxzKlxdXHMqXCkiO2k6MTc7czo4NzoiU0VMRUNUXHMrMVxzK0ZST01ccytteXNxbFwudXNlclxzK1dIRVJFXHMrY29uY2F0XChccypgdXNlcmBccyosXHMqJ0AnXHMqLFxzKmBob3N0YFxzKlwpIjtpOjE4O3M6NTY6InBhc3N0aHJ1XHMqXCgqXHMqZ2V0ZW52XHMqXCgqXHMqWyciXUhUVFBfQUNDRVBUX0xBTkdVQUdFIjtpOjE5O3M6NTg6InBhc3N0aHJ1XHMqXCgqXHMqZ2V0ZW52XHMqXCgqXHMqXFxbJyJdSFRUUF9BQ0NFUFRfTEFOR1VBR0UiO2k6MjA7czo1NToie1xzKlwkXHMqe1xzKnBhc3N0aHJ1XHMqXCgqXHMqXCRjbWRccypcKVxzKn1ccyp9XHMqPGJyPiI7aToyMTtzOjgyOiJydW5jb21tYW5kXHMqXChccypbJyJdc2hlbGxoZWxwWyciXVxzKixccypbJyJdKEdFVHxQT1NUfFNFUlZFUnxDT09LSUV8UkVRVUVTVClbJyJdIjtpOjIyO3M6MzE6Im5jZnRwcHV0XHMqLXVccypcJGZ0cF91c2VyX25hbWUiO2k6MjM7czozNzoiXCRsb2dpblxzKj1ccypAKnBvc2l4X2dldHVpZFwoKlxzKlwpKiI7aToyNDtzOjQ5OiIhQCpcJF9SRVFVRVNUXHMqXFtccypbJyJdYzk5c2hfc3VybFsnIl1ccypcXVxzKlwpIjtpOjI1O3M6NTM6InNldGNvb2tpZVwoKlxzKlsnIl1teXNxbF93ZWJfYWRtaW5fdXNlcm5hbWVbJyJdXHMqXCkqIjtpOjI2O3M6MTQzOiJcYihmdHBfZXhlY3xzeXN0ZW18c2hlbGxfZXhlY3xwYXNzdGhydXxwb3Blbnxwcm9jX29wZW4pXChbJyJdXCRjbWRccysxPlxzKi90bXAvY21kdGVtcFxzKzI+JjE7XHMqY2F0XHMrL3RtcC9jbWR0ZW1wO1xzKnJtXHMrL3RtcC9jbWR0ZW1wWyciXVwpOyI7aToyNztzOjI4OiJcJGZlXChbJyJdXCRjbWRccysyPiYxWyciXVwpIjtpOjI4O3M6OTY6IlwkZnVuY3Rpb25ccypcKCpccypAKlwkXyhHRVR8UE9TVHxTRVJWRVJ8Q09PS0lFfFJFUVVFU1QpXHMqXFtccypbJyJdezAsMX1jbWRbJyJdezAsMX1ccypcXVxzKlwpKiI7aToyOTtzOjkzOiJcJGNtZFxzKj1ccypcKFxzKkAqXCRfKEdFVHxQT1NUfFNFUlZFUnxDT09LSUV8UkVRVUVTVClccypcW1xzKlsnIl17MCwxfS4rP1snIl17MCwxfVxzKlxdXHMqXCkiO2k6MzA7czoyMDoiZXZhMVthLXpBLVowLTlfXStTaXIiO2k6MzE7czo4ODoiXCRpbmlccypcW1xzKlsnIl17MCwxfXVzZXJzWyciXXswLDF9XHMqXF1ccyo9XHMqYXJyYXlccypcKFxzKlsnIl17MCwxfXJvb3RbJyJdezAsMX1ccyo9PiI7aTozMjtzOjMzOiJwcm9jX29wZW5ccypcKFxzKlsnIl17MCwxfUlIU3RlYW0iO2k6MzM7czoxMzU6IlsnIl17MCwxfWh0dHBkXC5jb25mWyciXXswLDF9XHMqLFxzKlsnIl17MCwxfXZob3N0c1wuY29uZlsnIl17MCwxfVxzKixccypbJyJdezAsMX1jZmdcLnBocFsnIl17MCwxfVxzKixccypbJyJdezAsMX1jb25maWdcLnBocFsnIl17MCwxfSI7aTozNDtzOjgxOiJccyp7XHMqXCRfKEdFVHxQT1NUfFNFUlZFUnxDT09LSUV8UkVRVUVTVClccypcW1xzKlsnIl17MCwxfXJvb3RbJyJdezAsMX1ccypcXVxzKn0iO2k6MzU7czo0NjoicHJlZ19yZXBsYWNlXHMqXCgqXHMqWyciXXswLDF9L1wuXCovZVsnIl17MCwxfSI7aTozNjtzOjM2OiJldmFsXHMqXCgqXHMqZmlsZV9nZXRfY29udGVudHNccypcKCoiO2k6Mzc7czo3NDoiQCpzZXRjb29raWVccypcKCpccypbJyJdezAsMX1oaXRbJyJdezAsMX0sXHMqMVxzKixccyp0aW1lXHMqXCgqXHMqXCkqXHMqXCsiO2k6Mzg7czo0MToiZXZhbFxzKlwoKkAqXHMqc3RyaXBzbGFzaGVzXHMqXCgqXHMqQCpcJF8iO2k6Mzk7czo1OToiZXZhbFxzKlwoKkAqXHMqc3RyaXBzbGFzaGVzXHMqXCgqXHMqYXJyYXlfcG9wXHMqXCgqXHMqQCpcJF8iO2k6NDA7czo0MzoiZm9wZW5ccypcKCpccypbJyJdezAsMX0vZXRjL3Bhc3N3ZFsnIl17MCwxfSI7aTo0MTtzOjI0OiJcJEdMT0JBTFNcW1snIl17MCwxfV9fX18iO2k6NDI7czoyMTc6ImlzX2NhbGxhYmxlXHMqXCgqXHMqWyciXXswLDF9XGIoZnRwX2V4ZWN8c3lzdGVtfHNoZWxsX2V4ZWN8cGFzc3RocnV8cG9wZW58cHJvY19vcGVuKVsnIl17MCwxfVwpKlxzK2FuZFxzKyFpbl9hcnJheVxzKlwoKlxzKlsnIl17MCwxfVxiKGZ0cF9leGVjfHN5c3RlbXxzaGVsbF9leGVjfHBhc3N0aHJ1fHBvcGVufHByb2Nfb3BlbilbJyJdezAsMX1ccyosXHMqXCRkaXNhYmxlZnVuY3MiO2k6NDM7czoxMTI6ImZpbGVfZ2V0X2NvbnRlbnRzXHMqXCgqXHMqdHJpbVxzKlwoXHMqXCQuKz9cW1wkXyhHRVR8UE9TVHxTRVJWRVJ8Q09PS0lFfFJFUVVFU1QpXFtbJyJdezAsMX0uKz9bJyJdezAsMX1cXVxdXClcKTsiO2k6NDQ7czoxMzY6IndwX3Bvc3RzXHMrV0hFUkVccytwb3N0X3R5cGVccyo9XHMqWyciXXswLDF9cG9zdFsnIl17MCwxfVxzK0FORFxzK3Bvc3Rfc3RhdHVzXHMqPVxzKlsnIl17MCwxfXB1Ymxpc2hbJyJdezAsMX1ccytPUkRFUlxzK0JZXHMrYElEYFxzK0RFU0MiO2k6NDU7czoyMDoiZXhlY1xzKlwoXHMqWyciXWlwZnciO2k6NDY7czo0Mjoic3RycmV2XCgqXHMqWyciXXswLDF9dHJlc3NhWyciXXswLDF9XHMqXCkqIjtpOjQ3O3M6NDk6InN0cnJldlwoKlxzKlsnIl17MCwxfWVkb2NlZF80NmVzYWJbJyJdezAsMX1ccypcKSoiO2k6NDg7czo3MDoiZnVuY3Rpb25ccyt1cmxHZXRDb250ZW50c1xzKlwoKlxzKlwkdXJsXHMqLFxzKlwkdGltZW91dFxzKj1ccypcZCtccypcKSI7aTo0OTtzOjcxOiJmd3JpdGVccypcKCpccypcJGZwc2V0dlxzKixccypnZXRlbnZccypcKFxzKlsnIl1IVFRQX0NPT0tJRVsnIl1ccypcKVxzKiI7aTo1MDtzOjY2OiJpc3NldFxzKlwoKlxzKlwkX1BPU1RccypcW1xzKlsnIl17MCwxfWV4ZWNnYXRlWyciXXswLDF9XHMqXF1ccypcKSoiO2k6NTE7czoyMDA6IlVOSU9OXHMrU0VMRUNUXHMrWyciXXswLDF9MFsnIl17MCwxfVxzKixccypbJyJdezAsMX08XD8gc3lzdGVtXChcXFwkXyhHRVR8UE9TVHxTRVJWRVJ8Q09PS0lFfFJFUVVFU1QpXFtjcGNcXVwpO2V4aXQ7XHMqXD8+WyciXXswLDF9XHMqLFxzKjBccyosMFxzKixccyowXHMqLFxzKjBccytJTlRPXHMrT1VURklMRVxzK1snIl17MCwxfVwkWyciXXswLDF9IjtpOjUyO3M6MTQ5OiJcJEdMT0JBTFNcW1snIl17MCwxfS4rP1snIl17MCwxfVxdPUFycmF5XHMqXChccypiYXNlNjRfZGVjb2RlXHMqXChccypbJyJdezAsMX0uKz9bJyJdezAsMX1ccypcKVxzKixccypiYXNlNjRfZGVjb2RlXHMqXChccypbJyJdezAsMX0uKz9bJyJdezAsMX1ccypcKSI7aTo1MztzOjczOiJwcmVnX3JlcGxhY2VccypcKCpccypbJyJdezAsMX0vXC5cKlxbLis/XF1cPy9lWyciXXswLDF9XHMqLFxzKnN0cl9yZXBsYWNlIjtpOjU0O3M6MTAxOiJcJEdMT0JBTFNcW1xzKlsnIl17MCwxfS4rP1snIl17MCwxfVxzKlxdXFtccypcZCtccypcXVwoXHMqXCRfXGQrXHMqLFxzKl9cZCtccypcKFxzKlxkK1xzKlwpXHMqXClccypcKSI7aTo1NTtzOjExNToiXCRiZWVjb2RlXHMqPUAqZmlsZV9nZXRfY29udGVudHNccypcKCpbJyJdezAsMX1ccypcJHVybHB1cnNccypbJyJdezAsMX1cKSpccyo7XHMqZWNob1xzK1snIl17MCwxfVwkYmVlY29kZVsnIl17MCwxfSI7aTo1NjtzOjc5OiJcJHhcZCtccyo9XHMqWyciXS4rP1snIl1ccyo7XHMqXCR4XGQrXHMqPVxzKlsnIl0uKz9bJyJdXHMqO1xzKlwkeFxkK1xzKj1ccypbJyJdIjtpOjU3O3M6NDM6IjxcP3BocFxzK1wkX0Zccyo9XHMqX19GSUxFX19ccyo7XHMqXCRfWFxzKj0iO2k6NTg7czo2ODoiaWZccytcKCpccyptYWlsXHMqXChccypcJHJlY3BccyosXHMqXCRzdWJqXHMqLFxzKlwkc3R1bnRccyosXHMqXCRmcm0iO2k6NTk7czoxMzk6ImlmXHMrXChccypzdHJwb3NccypcKFxzKlwkdXJsXHMqLFxzKlsnIl1qcy9tb290b29sc1wuanNbJyJdXHMqXClccyo9PT1ccypmYWxzZVxzKyYmXHMrc3RycG9zXHMqXChccypcJHVybFxzKixccypbJyJdanMvY2FwdGlvblwuanNbJyJdezAsMX0iO2k6NjA7czo4MToiZXZhbFxzKlwoKlxzKnN0cmlwc2xhc2hlc1xzKlwoKlxzKmFycmF5X3BvcFwoKlwkXyhHRVR8UE9TVHxTRVJWRVJ8Q09PS0lFfFJFUVVFU1QpIjtpOjYxO3M6MjIxOiJpZlxzKlwoKlxzKmlzc2V0XHMqXCgqXHMqXCRfKEdFVHxQT1NUfFNFUlZFUnxDT09LSUV8UkVRVUVTVClccypcW1xzKlsnIl17MCwxfVx3K1snIl17MCwxfVxzKlxdXHMqXCkqXHMqXClccyp7XHMqXCRcdytccyo9XHMqXCRfKEdFVHxQT1NUfFNFUlZFUnxDT09LSUV8UkVRVUVTVClccypcW1xzKlsnIl17MCwxfVx3K1snIl17MCwxfVxzKlxdO1xzKmV2YWxccypcKCpccypcJFx3K1xzKlwpKiI7aTo2MjtzOjEyMzoicHJlZ19yZXBsYWNlXHMqXChccypbJyJdL1xeXCh3d3dcfGZ0cFwpXFxcLi9pWyciXVxzKixccypbJyJdWyciXSxccypAXCRfU0VSVkVSXHMqXFtccypbJyJdezAsMX1IVFRQX0hPU1RbJyJdezAsMX1ccypcXVxzKlwpIjtpOjYzO3M6MTAxOiJpZlxzKlwoIWZ1bmN0aW9uX2V4aXN0c1xzKlwoXHMqWyciXXBvc2l4X2dldHB3dWlkWyciXVxzKlwpXHMqJiZccyohaW5fYXJyYXlccypcKFxzKlsnIl1wb3NpeF9nZXRwd3VpZCI7aTo2NDtzOjg4OiI9XHMqcHJlZ19zcGxpdFxzKlwoXHMqWyciXS9cXCxcKFxcIFwrXClcPy9bJyJdLFxzKkAqaW5pX2dldFxzKlwoXHMqWyciXWRpc2FibGVfZnVuY3Rpb25zIjtpOjY1O3M6NDc6IlwkYlxzKlwuXHMqXCRwXHMqXC5ccypcJGhccypcLlxzKlwka1xzKlwuXHMqXCR2IjtpOjY2O3M6MjM6IlwoXHMqWyciXUlOU0hFTExbJyJdXHMqIjtpOjY3O3M6NTQ6IihHRVR8UE9TVHxTRVJWRVJ8Q09PS0lFfFJFUVVFU1QpXHMqXFtccypbJyJdX19fWyciXVxzKiI7aTo2ODtzOjk0OiJhcnJheV9wb3BccypcKCpccypcJHdvcmtSZXBsYWNlXHMqLFxzKlwkXyhHRVR8UE9TVHxTRVJWRVJ8Q09PS0lFfFJFUVVFU1QpXHMqLFxzKlwkY291bnRLZXlzTmV3IjtpOjY5O3M6MzU6ImlmXHMqXCgqXHMqQCpwcmVnX21hdGNoXHMqXCgqXHMqc3RyIjtpOjcwO3M6NDM6IkBcJF9DT09LSUVcW1snIl17MCwxfXN0YXRDb3VudGVyWyciXXswLDF9XF0iO2k6NzE7czoxMDU6ImZvcGVuXHMqXCgqXHMqWyciXWh0dHA6Ly9bJyJdXHMqXC5ccypcJGNoZWNrX2RvbWFpblxzKlwuXHMqWyciXTo4MFsnIl1ccypcLlxzKlwkY2hlY2tfZG9jXHMqLFxzKlsnIl1yWyciXSI7aTo3MjtzOjU1OiJAKmd6aW5mbGF0ZVxzKlwoXHMqQCpiYXNlNjRfZGVjb2RlXHMqXChccypAKnN0cl9yZXBsYWNlIjtpOjczO3M6Mjg6ImZpbGVfcHV0X2NvbnRlbnR6XHMqXCgqXHMqXCQiO2k6NzQ7czo4NzoiJiZccypmdW5jdGlvbl9leGlzdHNccypcKCpccypbJyJdezAsMX1nZXRteHJyWyciXXswLDF9XClccypcKVxzKntccypAZ2V0bXhyclxzKlwoKlxzKlwkIjtpOjc1O3M6NDE6IlwkcG9zdFJlc3VsdFxzKj1ccypjdXJsX2V4ZWNccypcKCpccypcJGNoIjtpOjc2O3M6MjU6ImZ1bmN0aW9uXHMrc3FsMl9zYWZlXHMqXCgiO2k6Nzc7czo4NToiZXhpdFxzKlwoXHMqWyciXXswLDF9PHNjcmlwdD5ccypzZXRUaW1lb3V0XHMqXChccypcXFsnIl17MCwxfWRvY3VtZW50XC5sb2NhdGlvblwuaHJlZiI7aTo3ODtzOjM4OiJldmFsXChccypzdHJpcHNsYXNoZXNcKFxzKlxcXCRfUkVRVUVTVCI7aTo3OTtzOjM2OiIhdG91Y2hcKFsnIl17MCwxfVwuXC4vXC5cLi9sYW5ndWFnZS8iO2k6ODA7czoxMDoiRGMwUkhhWyciXSI7aTo4MTtzOjYwOiJoZWFkZXJccypcKFsnIl1Mb2NhdGlvbjpccypbJyJdXHMqXC5ccypcJHRvXHMqXC5ccyp1cmxkZWNvZGUiO2k6ODI7czoxNTY6ImlmXHMqXChccypzdHJpcG9zXHMqXChccypcJF9TRVJWRVJcW1snIl17MCwxfUhUVFBfVVNFUl9BR0VOVFsnIl17MCwxfVxdXHMqLFxzKlsnIl17MCwxfUFuZHJvaWRbJyJdezAsMX1cKVxzKiE9PWZhbHNlXHMqJiZccyohXCRfQ09PS0lFXFtbJyJdezAsMX1kbGVfdXNlcl9pZCI7aTo4MztzOjM4OiJlY2hvXHMrQGZpbGVfZ2V0X2NvbnRlbnRzXHMqXChccypcJGdldCI7aTo4NDtzOjQ3OiJkZWZhdWx0X2FjdGlvblxzKj1ccypbJyJdezAsMX1GaWxlc01hblsnIl17MCwxfSI7aTo4NTtzOjMzOiJkZWZpbmVccypcKFxzKlsnIl1ERUZDQUxMQkFDS01BSUwiO2k6ODY7czoxNzoiTXlzdGVyaW91c1xzK1dpcmUiO2k6ODc7czozNDoicHJlZ19yZXBsYWNlXHMqXCgqXHMqWyciXS9cLlwrL2VzaSI7aTo4ODtzOjQ1OiJkZWZpbmVccypcKCpccypbJyJdU0JDSURfUkVRVUVTVF9GSUxFWyciXVxzKiwiO2k6ODk7czo2MDoiXCR0bGRccyo9XHMqYXJyYXlccypcKFxzKlsnIl1jb21bJyJdLFsnIl1vcmdbJyJdLFsnIl1uZXRbJyJdIjtpOjkwO3M6MTc6IkJyYXppbFxzK0hhY2tUZWFtIjtpOjkxO3M6MTQ1OiJpZlwoIWVtcHR5XChcJF9GSUxFU1xbWyciXXswLDF9bWVzc2FnZVsnIl17MCwxfVxdXFtbJyJdezAsMX1uYW1lWyciXXswLDF9XF1cKVxzK0FORFxzK1wobWQ1XChcJF9QT1NUXFtbJyJdezAsMX1uaWNrWyciXXswLDF9XF1cKVxzKj09XHMqWyciXXswLDF9IjtpOjkyO3M6NzU6InRpbWVcKFwpXHMqXCtccyoxMDAwMFxzKixccypbJyJdL1snIl1cKTtccyplY2hvXHMrXCRtX3p6O1xzKmV2YWxccypcKFwkbV96eiI7aTo5MztzOjEwNjoicmV0dXJuXHMqXChccypzdHJzdHJccypcKFxzKlwkc1xzKixccyonZWNobydccypcKVxzKj09XHMqZmFsc2VccypcP1xzKlwoXHMqc3Ryc3RyXHMqXChccypcJHNccyosXHMqJ3ByaW50JyI7aTo5NDtzOjY3OiJzZXRfdGltZV9saW1pdFxzKlwoXHMqMFxzKlwpO1xzKmlmXHMqXCghU2VjcmV0UGFnZUhhbmRsZXI6OmNoZWNrS2V5IjtpOjk1O3M6NzM6IkBoZWFkZXJcKFsnIl1Mb2NhdGlvbjpccypbJyJdXC5bJyJdaFsnIl1cLlsnIl10WyciXVwuWyciXXRbJyJdXC5bJyJdcFsnIl0iO2k6OTY7czo5OiJJclNlY1RlYW0iO2k6OTc7czo5NzoiXCRyQnVmZkxlblxzKj1ccypvcmRccypcKFxzKlZDX0RlY3J5cHRccypcKFxzKmZyZWFkXHMqXChccypcJGlucHV0LFxzKjFccypcKVxzKlwpXHMqXClccypcKlxzKjI1NiI7aTo5ODtzOjc0OiJjbGVhcnN0YXRjYWNoZVwoXHMqXCk7XHMqaWZccypcKFxzKiFpc19kaXJccypcKFxzKlwkZmxkXHMqXClccypcKVxzKnJldHVybiI7aTo5OTtzOjk3OiJjb250ZW50PVsnIl17MCwxfW5vLWNhY2hlWyciXXswLDF9O1xzKlwkY29uZmlnXFtbJyJdezAsMX1kZXNjcmlwdGlvblsnIl17MCwxfVxdXHMqXC49XHMqWyciXXswLDF9IjtpOjEwMDtzOjEyOiJ0bWhhcGJ6Y2VyZmYiO2k6MTAxO3M6NzA6ImZpbGVfZ2V0X2NvbnRlbnRzXHMqXCgqXHMqQURNSU5fUkVESVJfVVJMXHMqLFxzKmZhbHNlXHMqLFxzKlwkY3R4XHMqXCkiO2k6MTAyO3M6ODc6ImlmXHMqXChccypcJGlccyo8XHMqXChccypjb3VudFxzKlwoXHMqXCRfUE9TVFxbXHMqWyciXXswLDF9cVsnIl17MCwxfVxzKlxdXHMqXClccyotXHMqMSI7aToxMDM7czoyMzI6Imlzc2V0XHMqXChccypcJF9GSUxFU1xbXHMqWyciXXswLDF9eFsnIl17MCwxfVxzKlxdXHMqXClccypcP1xzKlwoXHMqaXNfdXBsb2FkZWRfZmlsZVxzKlwoXHMqXCRfRklMRVNcW1xzKlsnIl17MCwxfXhbJyJdezAsMX1ccypcXVxbXHMqWyciXXswLDF9dG1wX25hbWVbJyJdezAsMX1ccypcXVxzKlwpXHMqXD9ccypcKFxzKmNvcHlccypcKFxzKlwkX0ZJTEVTXFtccypbJyJdezAsMX14WyciXXswLDF9XHMqXF0iO2k6MTA0O3M6ODI6IlwkVVJMXHMqPVxzKlwkdXJsc1xbXHMqcmFuZFwoXHMqMFxzKixccypjb3VudFxzKlwoXHMqXCR1cmxzXHMqXClccyotXHMqMVxzKlwpXHMqXF0iO2k6MTA1O3M6MjEzOiJAKm1vdmVfdXBsb2FkZWRfZmlsZVxzKlwoXHMqXCRfRklMRVNcW1xzKlsnIl17MCwxfW1lc3NhZ2VbJyJdezAsMX1ccypcXVxbXHMqWyciXXswLDF9dG1wX25hbWVbJyJdezAsMX1ccypcXVxzKixccypcJHNlY3VyaXR5X2NvZGVccypcLlxzKiIvIlxzKlwuXHMqXCRfRklMRVNcW1snIl17MCwxfW1lc3NhZ2VbJyJdezAsMX1cXVxbWyciXXswLDF9bmFtZVsnIl17MCwxfVxdXCkiO2k6MTA2O3M6Mzk6ImV2YWxccypcKCpccypzdHJyZXZccypcKCpccypzdHJfcmVwbGFjZSI7aToxMDc7czo4MToiXCRyZXM9bXlzcWxfcXVlcnlcKFsnIl17MCwxfVNFTEVDVFxzK1wqXHMrRlJPTVxzK2B3YXRjaGRvZ19vbGRfMDVgXHMrV0hFUkVccytwYWdlIjtpOjEwODtzOjcyOiJcXmRvd25sb2Fkcy9cKFxbMC05XF1cKlwpL1woXFswLTlcXVwqXCkvXCRccytkb3dubG9hZHNcLnBocFw/Yz1cJDEmcD1cJDIiO2k6MTA5O3M6OTI6InByZWdfcmVwbGFjZVxzKlwoXHMqXCRleGlmXFtccypcXFsnIl1NYWtlXFxbJyJdXHMqXF1ccyosXHMqXCRleGlmXFtccypcXFsnIl1Nb2RlbFxcWyciXVxzKlxdIjtpOjExMDtzOjM4OiJmY2xvc2VcKFwkZlwpO1xzKmVjaG9ccypbJyJdb1wua1wuWyciXSI7aToxMTE7czo0MToiZnVuY3Rpb25ccytpbmplY3RcKFwkZmlsZSxccypcJGluamVjdGlvbj0iO2k6MTEyO3M6NzE6ImV4ZWNsXChbJyJdL2Jpbi9zaFsnIl1ccyosXHMqWyciXS9iaW4vc2hbJyJdXHMqLFxzKlsnIl0taVsnIl1ccyosXHMqMFwpIjtpOjExMztzOjQzOiJmaW5kXHMrL1xzKy10eXBlXHMrZlxzKy1wZXJtXHMrLTA0MDAwXHMrLWxzIjtpOjExNDtzOjQ0OiJpZlxzKlwoXHMqZnVuY3Rpb25fZXhpc3RzXHMqXChccyoncGNudGxfZm9yayI7aToxMTU7czo2NToidXJsZW5jb2RlXChwcmludF9yXChhcnJheVwoXCksMVwpXCksNSwxXClcLmNcKSxcJGNcKTt9ZXZhbFwoXCRkXCkiO2k6MTE2O3M6ODk6ImFycmF5X2tleV9leGlzdHNccypcKFxzKlwkZmlsZVJhc1xzKixccypcJGZpbGVUeXBlXClccypcP1xzKlwkZmlsZVR5cGVcW1xzKlwkZmlsZVJhc1xzKlxdIjtpOjExNztzOjk5OiJpZlxzKlwoXHMqZndyaXRlXHMqXChccypcJGhhbmRsZVxzKixccypmaWxlX2dldF9jb250ZW50c1xzKlwoXHMqXCRfKEdFVHxQT1NUfFNFUlZFUnxDT09LSUV8UkVRVUVTVCkiO2k6MTE4O3M6MTc4OiJpZlxzKlwoXHMqXCRfUE9TVFxbXHMqWyciXXswLDF9cGF0aFsnIl17MCwxfVxzKlxdXHMqPT1ccypbJyJdezAsMX1bJyJdezAsMX1ccypcKVxzKntccypcJHVwbG9hZGZpbGVccyo9XHMqXCRfRklMRVNcW1xzKlsnIl17MCwxfWZpbGVbJyJdezAsMX1ccypcXVxbXHMqWyciXXswLDF9bmFtZVsnIl17MCwxfVxzKlxdIjtpOjExOTtzOjgzOiJpZlxzKlwoXHMqXCRkYXRhU2l6ZVxzKjxccypCT1RDUllQVF9NQVhfU0laRVxzKlwpXHMqcmM0XHMqXChccypcJGRhdGEsXHMqXCRjcnlwdGtleSI7aToxMjA7czo5MDoiLFxzKmFycmF5XHMqXCgnXC4nLCdcLlwuJywnVGh1bWJzXC5kYidcKVxzKlwpXHMqXClccyp7XHMqY29udGludWU7XHMqfVxzKmlmXHMqXChccyppc19maWxlIjtpOjEyMTtzOjUxOiJcKVxzKlwuXHMqc3Vic3RyXHMqXChccyptZDVccypcKFxzKnN0cnJldlxzKlwoXHMqXCQiO2k6MTIyO3M6Mjg6ImFzc2VydFxzKlwoXHMqQCpzdHJpcHNsYXNoZXMiO2k6MTIzO3M6MTU6IlsnIl1lL1wqXC4vWyciXSI7aToxMjQ7czo1MjoiZWNob1snIl17MCwxfTxjZW50ZXI+PGI+RG9uZVxzKj09PlxzKlwkdXNlcmZpbGVfbmFtZSI7aToxMjU7czoxMzQ6ImlmXHMqXChcJGtleVxzKiE9XHMqWyciXXswLDF9bWFpbF90b1snIl17MCwxfVxzKiYmXHMqXCRrZXlccyohPVxzKlsnIl17MCwxfXNtdHBfc2VydmVyWyciXXswLDF9XHMqJiZccypcJGtleVxzKiE9XHMqWyciXXswLDF9c210cF9wb3J0IjtpOjEyNjtzOjU5OiJzdHJwb3NcKFwkdWEsXHMqWyciXXswLDF9eWFuZGV4Ym90WyciXXswLDF9XClccyohPT1ccypmYWxzZSI7aToxMjc7czo0NToiaWZcKENoZWNrSVBPcGVyYXRvclwoXClccyomJlxzKiFpc01vZGVtXChcKVwpIjtpOjEyODtzOjM0OiJ1cmw9PFw/cGhwXHMqZWNob1xzKlwkcmFuZF91cmw7XD8+IjtpOjEyOTtzOjI3OiJlY2hvXHMqWyciXWFuc3dlcj1lcnJvclsnIl0iO2k6MTMwO3M6MzI6IlwkcG9zdFxzKj1ccypbJyJdXFx4NzdcXHg2N1xceDY1IjtpOjEzMTtzOjQ2OiJpZlxzKlwoZGV0ZWN0X21vYmlsZV9kZXZpY2VcKFwpXClccyp7XHMqaGVhZGVyIjtpOjEzMjtzOjk6IklySXNUXC5JciI7aToxMzM7czo4OToiXCRsZXR0ZXJccyo9XHMqc3RyX3JlcGxhY2VccypcKFxzKlwkQVJSQVlcWzBcXVxbXCRqXF1ccyosXHMqXCRhcnJcW1wkaW5kXF1ccyosXHMqXCRsZXR0ZXIiO2k6MTM0O3M6OTI6ImNyZWF0ZV9mdW5jdGlvblxzKlwoXHMqWyciXVwkbVsnIl1ccyosXHMqWyciXWlmXHMqXChccypcJG1ccypcW1xzKjB4MDFccypcXVxzKj09XHMqWyciXUxbJyJdIjtpOjEzNTtzOjcyOiJcJHBccyo9XHMqc3RycG9zXChcJHR4XHMqLFxzKlsnIl17MCwxfXtcI1snIl17MCwxfVxzKixccypcJHAyXHMqXCtccyoyXCkiO2k6MTM2O3M6MTEyOiJcJHVzZXJfYWdlbnRccyo9XHMqcHJlZ19yZXBsYWNlXHMqXChccypbJyJdXHxVc2VyXFxcLkFnZW50XFw6XFtcXHMgXF1cP1x8aVsnIl1ccyosXHMqWyciXVsnIl1ccyosXHMqXCR1c2VyX2FnZW50IjtpOjEzNztzOjMxOiJwcmludFwoIlwjXHMraW5mb1xzK09LXFxuXFxuIlwpIjtpOjEzODtzOjUxOiJcXVxzKn1ccyo9XHMqdHJpbVxzKlwoXHMqYXJyYXlfcG9wXHMqXChccypcJHtccypcJHsiO2k6MTM5O3M6NjQ6IlxdPVsnIl17MCwxfWlwWyciXXswLDF9XHMqO1xzKmlmXHMqXChccyppc3NldFxzKlwoXHMqXCRfU0VSVkVSXFsiO2k6MTQwO3M6MzQ6InByaW50XHMqXCRzb2NrICJQUklWTVNHICJcLlwkb3duZXIiO2k6MTQxO3M6NjM6ImlmXCgvXF5cXDpcJG93bmVyIVwuXCpcXEBcLlwqUFJJVk1TR1wuXCo6XC5tc2dmbG9vZFwoXC5cKlwpL1wpeyI7aToxNDI7czoyNjoiXFstXF1ccytDb25uZWN0aW9uXHMrZmFpbGQiO2k6MTQzO3M6NTQ6IjwhLS1cI2V4ZWNccytjbWQ9WyciXXswLDF9XCRIVFRQX0FDQ0VQVFsnIl17MCwxfVxzKi0tPiI7aToxNDQ7czoxNjc6IlsnIl17MCwxfUZyb206XHMqWyciXXswLDF9XC5cJF9QT1NUXFtbJyJdezAsMX1yZWFsbmFtZVsnIl17MCwxfVxdXC5bJyJdezAsMX0gWyciXXswLDF9XC5bJyJdezAsMX0gPFsnIl17MCwxfVwuXCRfUE9TVFxbWyciXXswLDF9ZnJvbVsnIl17MCwxfVxdXC5bJyJdezAsMX0+XFxuWyciXXswLDF9IjtpOjE0NTtzOjk5OiJpZlxzKlwoXHMqaXNfZGlyXHMqXChccypcJEZ1bGxQYXRoXHMqXClccypcKVxzKkFsbERpclxzKlwoXHMqXCRGdWxsUGF0aFxzKixccypcJEZpbGVzXHMqXCk7XHMqfVxzKn0iO2k6MTQ2O3M6Nzg6IlwkcFxzKj1ccypzdHJwb3NccypcKFxzKlwkdHhccyosXHMqWyciXXswLDF9e1wjWyciXXswLDF9XHMqLFxzKlwkcDJccypcK1xzKjJcKSI7aToxNDc7czoxMjM6InByZWdfbWF0Y2hfYWxsXChbJyJdezAsMX0vPGEgaHJlZj0iXFwvdXJsXFxcP3E9XChcLlwrXD9cKVxbJlx8IlxdXCsvaXNbJyJdezAsMX0sIFwkcGFnZVxbWyciXXswLDF9ZXhlWyciXXswLDF9XF0sIFwkbGlua3NcKSI7aToxNDg7czo4MDoiXCR1cmxccyo9XHMqXCR1cmxccypcLlxzKlsnIl17MCwxfVw/WyciXXswLDF9XHMqXC5ccypodHRwX2J1aWxkX3F1ZXJ5XChcJHF1ZXJ5XCkiO2k6MTQ5O3M6ODM6InByaW50XHMrXCRzb2NrXHMrWyciXXswLDF9TklDSyBbJyJdezAsMX1ccytcLlxzK1wkbmlja1xzK1wuXHMrWyciXXswLDF9XFxuWyciXXswLDF9IjtpOjE1MDtzOjMyOiJQUklWTVNHXC5cKjpcLm93bmVyXFxzXCtcKFwuXCpcKSI7aToxNTE7czo3NToiXCRyZXN1bHRGVUxccyo9XHMqc3RyaXBjc2xhc2hlc1xzKlwoXHMqXCRfUE9TVFxbWyciXXswLDF9cmVzdWx0RlVMWyciXXswLDF9IjtpOjE1MjtzOjE1MDoiXCRfKEdFVHxQT1NUfFNFUlZFUnxDT09LSUV8UkVRVUVTVClcW1snIl17MCwxfVthLXpBLVowLTlfXStbJyJdezAsMX1cXVwoXHMqXCRfKEdFVHxQT1NUfFNFUlZFUnxDT09LSUV8UkVRVUVTVClcW1snIl17MCwxfVthLXpBLVowLTlfXStbJyJdezAsMX1cXVxzKlwpIjtpOjE1MztzOjYwOiJpZlxzKlwoXHMqQCptZDVccypcKFxzKlwkXyhHRVR8UE9TVHxTRVJWRVJ8Q09PS0lFfFJFUVVFU1QpXFsiO2k6MTU0O3M6OTQ6ImVjaG9ccytmaWxlX2dldF9jb250ZW50c1xzKlwoXHMqYmFzZTY0X3VybF9kZWNvZGVccypcKFxzKkAqXCRfKEdFVHxQT1NUfFNFUlZFUnxDT09LSUV8UkVRVUVTVCkiO2k6MTU1O3M6ODQ6ImZ3cml0ZVxzKlwoXHMqXCRmaFxzKixccypzdHJpcHNsYXNoZXNccypcKFxzKkAqXCRfKEdFVHxQT1NUfFNFUlZFUnxDT09LSUV8UkVRVUVTVClcWyI7aToxNTY7czo4MzoiaWZccypcKFxzKm1haWxccypcKFxzKlwkbWFpbHNcW1wkaVxdXHMqLFxzKlwkdGVtYVxzKixccypiYXNlNjRfZW5jb2RlXHMqXChccypcJHRleHQiO2k6MTU3O3M6NjI6IlwkZ3ppcFxzKj1ccypAKmd6aW5mbGF0ZVxzKlwoXHMqQCpzdWJzdHJccypcKFxzKlwkZ3plbmNvZGVfYXJnIjtpOjE1ODtzOjczOiJtb3ZlX3VwbG9hZGVkX2ZpbGVcKFwkX0ZJTEVTXFtbJyJdezAsMX1lbGlmWyciXXswLDF9XF1cW1snIl17MCwxfXRtcF9uYW1lIjtpOjE1OTtzOjgwOiJoZWFkZXJcKFsnIl17MCwxfXM6XHMqWyciXXswLDF9XHMqXC5ccypwaHBfdW5hbWVccypcKFxzKlsnIl17MCwxfW5bJyJdezAsMX1ccypcKSI7aToxNjA7czoxMjoiQnlccytXZWJSb29UIjtpOjE2MTtzOjU3OiJcJE9PTzBPME8wMD1fX0ZJTEVfXztccypcJE9PMDBPMDAwMFxzKj1ccyoweDFiNTQwO1xzKmV2YWwiO2k6MTYyO3M6NTI6IlwkbWFpbGVyXHMqPVxzKlwkX1BPU1RcW1snIl17MCwxfXhfbWFpbGVyWyciXXswLDF9XF0iO2k6MTYzO3M6Nzc6InByZWdfbWF0Y2hcKFsnIl0vXCh5YW5kZXhcfGdvb2dsZVx8Ym90XCkvaVsnIl0sXHMqZ2V0ZW52XChbJyJdSFRUUF9VU0VSX0FHRU5UIjtpOjE2NDtzOjQ3OiJlY2hvXHMrXCRpZnVwbG9hZD1bJyJdezAsMX1ccypJdHNPa1xzKlsnIl17MCwxfSI7aToxNjU7czo0MjoiZnNvY2tvcGVuXHMqXChccypcJENvbm5lY3RBZGRyZXNzXHMqLFxzKjI1IjtpOjE2NjtzOjY0OiJcJF9TRVNTSU9OXFtbJyJdezAsMX1zZXNzaW9uX3BpblsnIl17MCwxfVxdXHMqPVxzKlsnIl17MCwxfVwkUElOIjtpOjE2NztzOjYzOiJcJHVybFsnIl17MCwxfVxzKlwuXHMqXCRzZXNzaW9uX2lkXHMqXC5ccypbJyJdezAsMX0vbG9naW5cLmh0bWwiO2k6MTY4O3M6NDQ6ImZccyo9XHMqXCRxXHMqXC5ccypcJGFccypcLlxzKlwkYlxzKlwuXHMqXCR4IjtpOjE2OTtzOjU1OiJpZlxzKlwobWQ1XCh0cmltXChcJF8oR0VUfFBPU1R8U0VSVkVSfENPT0tJRXxSRVFVRVNUKVxbIjtpOjE3MDtzOjMzOiJkaWVccypcKFxzKlBIUF9PU1xzKlwuXHMqY2hyXHMqXCgiO2k6MTcxO3M6MTkyOiJjcmVhdGVfZnVuY3Rpb25ccypcKFsnIl1bJyJdXHMqLFxzKlxiKGV2YWx8YmFzZTY0X2RlY29kZXxzdHJyZXZ8cHJlZ19yZXBsYWNlfHByZWdfcmVwbGFjZV9jYWxsYmFja3x1cmxkZWNvZGV8c3Ryc3RyfGd6aW5mbGF0ZXxzcHJpbnRmfGd6dW5jb21wcmVzc3xhc3NlcnR8c3RyX3JvdDEzfG1kNXxhcnJheV93YWxrfGFycmF5X2ZpbHRlcikiO2k6MTcyO3M6ODA6IlwkaGVhZGVyc1xzKj1ccypcJF8oR0VUfFBPU1R8U0VSVkVSfENPT0tJRXxSRVFVRVNUKVxbWyciXXswLDF9aGVhZGVyc1snIl17MCwxfVxdIjtpOjE3MztzOjg2OiJmaWxlX3B1dF9jb250ZW50c1xzKlwoWyciXXswLDF9MVwudHh0WyciXXswLDF9XHMqLFxzKnByaW50X3JccypcKFxzKlwkX1BPU1RccyosXHMqdHJ1ZSI7aToxNzQ7czozNToiZndyaXRlXHMqXChccypcJGZsd1xzKixccypcJGZsXHMqXCkiO2k6MTc1O3M6Mzg6Ilwkc3lzX3BhcmFtc1xzKj1ccypAKmZpbGVfZ2V0X2NvbnRlbnRzIjtpOjE3NjtzOjUxOiJcJGFsbGVtYWlsc1xzKj1ccypAc3BsaXRcKCJcXG4iXHMqLFxzKlwkZW1haWxsaXN0XCkiO2k6MTc3O3M6NTA6ImZpbGVfcHV0X2NvbnRlbnRzXChTVkNfU0VMRlxzKlwuXHMqWyciXS9cLmh0YWNjZXNzIjtpOjE3ODtzOjU3OiJjcmVhdGVfZnVuY3Rpb25cKFsnIl1bJyJdLFxzKlwkb3B0XFsxXF1ccypcLlxzKlwkb3B0XFs0XF0iO2k6MTc5O3M6OTU6IjxzY3JpcHRccyt0eXBlPVsnIl17MCwxfXRleHQvamF2YXNjcmlwdFsnIl17MCwxfVxzK3NyYz1bJyJdezAsMX1qcXVlcnktdVwuanNbJyJdezAsMX0+PC9zY3JpcHQ+IjtpOjE4MDtzOjI4OiJVUkw9PFw/ZWNob1xzK1wkaW5kZXg7XHMrXD8+IjtpOjE4MTtzOjIzOiJcI1xzKnNlY3VyaXR5c3BhY2VcLmNvbSI7aToxODI7czoxODoiXCNccypzdGVhbHRoXHMqYm90IjtpOjE4MztzOjIxOiJBcHBsZVxzK1NwQW1ccytSZVp1bFQiO2k6MTg0O3M6NTI6ImlzX3dyaXRhYmxlXChcJGRpclwuWyciXXdwLWluY2x1ZGVzL3ZlcnNpb25cLnBocFsnIl0iO2k6MTg1O3M6NDI6ImlmXChlbXB0eVwoXCRfQ09PS0lFXFtbJyJdeFsnIl1cXVwpXCl7ZWNobyI7aToxODY7czoyOToiXClcXTt9aWZcKGlzc2V0XChcJF9TRVJWRVJcW18iO2k6MTg3O3M6NjY6ImlmXChAXCR2YXJzXChnZXRfbWFnaWNfcXVvdGVzX2dwY1woXClccypcP1xzKnN0cmlwc2xhc2hlc1woXCR1cmlcKSI7aToxODg7czozMzoiYmFzZVsnIl17MCwxfVwuXChcZCtccypcKlxzKlxkK1wpIjtpOjE4OTtzOjc1OiJcJHBhcmFtXHMqPVxzKlwkcGFyYW1ccyp4XHMqXCRuXC5zdWJzdHJccypcKFwkcGFyYW1ccyosXHMqbGVuZ3RoXChcJHBhcmFtXCkiO2k6MTkwO3M6NTM6InJlZ2lzdGVyX3NodXRkb3duX2Z1bmN0aW9uXChccypbJyJdezAsMX1yZWFkX2Fuc19jb2RlIjtpOjE5MTtzOjM1OiJiYXNlNjRfZGVjb2RlXChcJF9QT1NUXFtbJyJdezAsMX1fLSI7aToxOTI7czo1NDoiaWZcKGlzc2V0XChcJF9QT1NUXFtbJyJdezAsMX1tc2dzdWJqZWN0WyciXXswLDF9XF1cKVwpIjtpOjE5MztzOjEzMzoibWFpbFwoXCRhcnJcW1snIl17MCwxfXRvWyciXXswLDF9XF0sXCRhcnJcW1snIl17MCwxfXN1YmpbJyJdezAsMX1cXSxcJGFyclxbWyciXXswLDF9bXNnWyciXXswLDF9XF0sXCRhcnJcW1snIl17MCwxfWhlYWRbJyJdezAsMX1cXVwpOyI7aToxOTQ7czozODoiZmlsZV9nZXRfY29udGVudHNcKHRyaW1cKFwkZlxbXCRfR0VUXFsiO2k6MTk1O3M6NjA6ImluaV9nZXRcKFsnIl17MCwxfWZpbHRlclwuZGVmYXVsdF9mbGFnc1snIl17MCwxfVwpXCl7Zm9yZWFjaCI7aToxOTY7czo1MDoiY2h1bmtfc3BsaXRcKGJhc2U2NF9lbmNvZGVcKGZyZWFkXChcJHtcJHtbJyJdezAsMX0iO2k6MTk3O3M6NTI6Ilwkc3RyPVsnIl17MCwxfTxoMT40MDNccytGb3JiaWRkZW48L2gxPjwhLS1ccyp0b2tlbjoiO2k6MTk4O3M6MzM6IjxcP3BocFxzK3JlbmFtZVwoWyciXXdzb1wucGhwWyciXSI7aToxOTk7czo2NDoiXCRbYS16QS1aMC05X10rL1wqLnsxLDEwfVwqL1xzKlwuXHMqXCRbYS16QS1aMC05X10rL1wqLnsxLDEwfVwqLyI7aToyMDA7czo1MToiQCptYWlsXChcJG1vc0NvbmZpZ19tYWlsZnJvbSwgXCRtb3NDb25maWdfbGl2ZV9zaXRlIjtpOjIwMTtzOjk1OiJcJHQ9XCRzO1xzKlwkb1xzKj1ccypbJyJdWyciXTtccypmb3JcKFwkaT0wO1wkaTxzdHJsZW5cKFwkdFwpO1wkaVwrXCtcKXtccypcJG9ccypcLj1ccypcJHR7XCRpfSI7aToyMDI7czo0NzoibW1jcnlwdFwoXCRkYXRhLCBcJGtleSwgXCRpdiwgXCRkZWNyeXB0ID0gRkFMU0UiO2k6MjAzO3M6MTU6InRuZWdhX3Jlc3VfcHR0aCI7aToyMDQ7czo5OiJ0c29oX3B0dGgiO2k6MjA1O3M6MTI6IlJFUkVGRVJfUFRUSCI7aToyMDY7czozMToid2ViaVwucnUvd2ViaV9maWxlcy9waHBfbGlibWFpbCI7aToyMDc7czo0MDoic3Vic3RyX2NvdW50XChnZXRlbnZcKFxcWyciXUhUVFBfUkVGRVJFUiI7aToyMDg7czozNzoiZnVuY3Rpb24gcmVsb2FkXChcKXtoZWFkZXJcKCJMb2NhdGlvbiI7aToyMDk7czoyNToiaW1nIHNyYz1bJyJdb3BlcmEwMDBcLnBuZyI7aToyMTA7czo0NjoiZWNob1xzKm1kNVwoXCRfUE9TVFxbWyciXXswLDF9Y2hlY2tbJyJdezAsMX1cXSI7aToyMTE7czozMzoiZVZhTFwoXHMqdHJpbVwoXHMqYmFTZTY0X2RlQ29EZVwoIjtpOjIxMjtzOjQyOiJmc29ja29wZW5cKFwkbVxbMFxdLFwkbVxbMTBcXSxcJF8sXCRfXyxcJG0iO2k6MjEzO3M6MTk6IlsnIl09Plwke1wke1snIl1cXHgiO2k6MjE0O3M6Mzg6InByZWdfcmVwbGFjZVwoWyciXS5VVEZcXC04OlwoLlwqXCkuVXNlIjtpOjIxNTtzOjMwOiI6OlsnIl1cLnBocHZlcnNpb25cKFwpXC5bJyJdOjoiO2k6MjE2O3M6NDA6IkBzdHJlYW1fc29ja2V0X2NsaWVudFwoWyciXXswLDF9dGNwOi8vXCQiO2k6MjE3O3M6MTg6Ij09MFwpe2pzb25RdWl0XChcJCI7aToyMTg7czo0NjoibG9jXHMqPVxzKlsnIl17MCwxfTxcP2VjaG9ccytcJHJlZGlyZWN0O1xzKlw/PiI7aToyMTk7czoyODoiYXJyYXlcKFwkZW4sXCRlcyxcJGVmLFwkZWxcKSI7aToyMjA7czozNzoiWyciXXswLDF9LmMuWyciXXswLDF9XC5zdWJzdHJcKFwkdmJnLCI7aToyMjE7czoxODoiZnVja1xzK3lvdXJccyttYW1hIjtpOjIyMjtzOjc4OiJjYWxsX3VzZXJfZnVuY1woXHMqWyciXWFjdGlvblsnIl1ccypcLlxzKlwkXyhHRVR8UE9TVHxTRVJWRVJ8Q09PS0lFfFJFUVVFU1QpXFsiO2k6MjIzO3M6NTk6InN0cl9yZXBsYWNlXChcJGZpbmRccyosXHMqXCRmaW5kXHMqXC5ccypcJGh0bWxccyosXHMqXCR0ZXh0IjtpOjIyNDtzOjMzOiJmaWxlX2V4aXN0c1xzKlwoKlxzKlsnIl0vdmFyL3RtcC8iO2k6MjI1O3M6NDE6IiYmXHMqIWVtcHR5XChccypcJF9DT09LSUVcW1snIl1maWxsWyciXVxdIjtpOjIyNjtzOjIxOiJmdW5jdGlvblxzK2luRGlhcGFzb24iO2k6MjI3O3M6MzU6Im1ha2VfZGlyX2FuZF9maWxlXChccypcJHBhdGhfam9vbWxhIjtpOjIyODtzOjQxOiJsaXN0aW5nX3BhZ2VcKFxzKm5vdGljZVwoXHMqWyciXXN5bWxpbmtlZCI7aToyMjk7czo2MjoibGlzdFxzKlwoXHMqXCRob3N0XHMqLFxzKlwkcG9ydFxzKixccypcJHNpemVccyosXHMqXCRleGVjX3RpbWUiO2k6MjMwO3M6NTI6ImZpbGVtdGltZVwoXCRiYXNlcGF0aFxzKlwuXHMqWyciXS9jb25maWd1cmF0aW9uXC5waHAiO2k6MjMxO3M6NTg6ImZ1bmN0aW9uXHMrcmVhZF9waWNcKFxzKlwkQVxzKlwpXHMqe1xzKlwkYVxzKj1ccypcJF9TRVJWRVIiO2k6MjMyO3M6NjQ6ImNoclwoXHMqXCR0YWJsZVxbXHMqXCRzdHJpbmdcW1xzKlwkaVxzKlxdXHMqXCpccypwb3dcKDY0XHMqLFxzKjEiO2k6MjMzO3M6Mzk6IlxdXHMqXCl7ZXZhbFwoXHMqXCRbYS16QS1aMC05X10rXFtccypcJCI7aToyMzQ7czo1NDoiTG9jYXRpb246OmlzRmlsZVdyaXRhYmxlXChccypFbmNvZGVFeHBsb3Jlcjo6Z2V0Q29uZmlnIjtpOjIzNTtzOjEzOiJieVxzK1NodW5jZW5nIjtpOjIzNjtzOjE0OiJ7ZXZhbFwoXCR7XCRzMiI7aToyMzc7czoxODoiZXZhbFwoXCRzMjFcKFwke1wkIjtpOjIzODtzOjIxOiJSYW1aa2lFXHMrLVxzK2V4cGxvaXQiO2k6MjM5O3M6NDc6IlsnIl1yZW1vdmVfc2NyaXB0c1snIl1ccyo9PlxzKmFycmF5XChbJyJdUmVtb3ZlIjtpOjI0MDtzOjI4OiJcJGJhY2tfY29ubmVjdF9wbFxzKj1ccypbJyJdIjtpOjI0MTtzOjQwOiJcJHNpdGVfcm9vdFwuXCRmaWxldW5wX2RpclwuXCRmaWxldW5wX2ZuIjtpOjI0MjtzOjI0OiJAcHJlZ19yZXBsYWNlXChbJyJdL2FkL2UiO2k6MjQzO3M6MjY6IjxiPlwkdWlkXHMqXChcJHVuYW1lXCk8L2I+IjtpOjI0NDtzOjExOiJGeDI5R29vZ2xlciI7aToyNDU7czo4OiJlbnZpcjBubiI7aToyNDY7czo0NjoiYXJyYXlcKFsnIl1cKi9bJyJdLFsnIl0vXCpbJyJdXCksYmFzZTY0X2RlY29kZSI7aToyNDc7czoyODoiPFw/PVxzKkBwaHBfdW5hbWVcKFwpO1xzKlw/PiI7aToyNDg7czoxMToic1V4Q3Jld1xzK1YiO2k6MjQ5O3M6MTY6IldhckJvdFxzK3NVeENyZXciO2k6MjUwO3M6NDM6ImV4ZWNcKFsnIl1jZFxzKy90bXA7Y3VybFxzKy1PXHMrWyciXVwuXCR1cmwiO2k6MjUxO3M6MTU6IkJhdGF2aTRccytTaGVsbCI7aToyNTI7czozNjoiQGV4dHJhY3RcKFwkX1JFUVVFU1RcW1snIl1meDI5c2hjb29rIjtpOjI1MztzOjEwOiJUdVhfU2hhZG93IjtpOjI1NDtzOjQwOiI9QGZvcGVuXHMqXChbJyJdcGhwXC5pbmlbJyJdXHMqLFxzKlsnIl13IjtpOjI1NTtzOjk6IkxlYmF5Q3JldyI7aToyNTY7czo3OToiXCRoZWFkZXJzXHMqXC49XHMqXCRfKEdFVHxQT1NUfFNFUlZFUnxDT09LSUV8UkVRVUVTVClcW1xzKlsnIl1lTWFpbEFkZFsnIl1ccypcXSI7aToyNTc7czoxOToiYm9nZWxccyotXHMqZXhwbG9pdCI7aToyNTg7czo1OToiXFt1bmFtZVxdWyciXVxzKlwuXHMqcGhwX3VuYW1lXChccypcKVxzKlwuXHMqWyciXVxbL3VuYW1lXF0iO2k6MjU5O3M6MzI6IlxdXChcJF8xLFwkXzFcKVwpO2Vsc2V7XCRHTE9CQUxTIjtpOjI2MDtzOjE0OiJmaWxlOmZpbGU6Ly8vLyI7aToyNjE7czozMjoiZnVuY3Rpb25ccytNQ0xvZ2luXChcKVxzKntccypkaWUiO2k6MjYyO3M6NTU6IntlY2hvIFsnIl15ZXNbJyJdOyBleGl0O31lbHNle2VjaG8gWyciXW5vWyciXTsgZXhpdDt9fX0iO2k6MjYzO3M6Mzk6IjtcPz48XD89XCR7WyciXV9bJyJdXC5cJF99XFtbJyJdX1snIl1cXSI7aToyNjQ7czo0MToiXCRhXFsxXF09PVsnIl1ieXBhc3NpcFsnIl1cKTtcJGM9c2VsZjo6YzEiO2k6MjY1O3M6NDI6IlwkZGlyXC5bJyJdL1snIl1cLlwkZlwuWyciXS93cC1jb25maWdcLnBocCI7aToyNjY7czoyMzoiZXZhbFwoWyciXXJldHVyblxzK2V2YWwiO2k6MjY3O3M6OTA6ImZ3cml0ZVwoXCRbYS16QS1aMC05X10rLCJcXHhFRlxceEJCXFx4QkYiXC5pY29udlwoWyciXWdia1snIl0sWyciXXV0Zi04Ly9JR05PUkVbJyJdLFwkYm9keSI7aToyNjg7czo3MjoiZWNob1xzK1snIl1fX3N1Y2Nlc3NfX1snIl1ccypcLlxzKlwkTm93U3ViRm9sZGVyc1xzKlwuXHMqWyciXV9fc3VjY2Vzc19fIjtpOjI2OTtzOjc3OiJvYl9zdGFydFwoXCk7XHMqdmFyX2R1bXBcKFwkX1BPU1RccyosXHMqXCRfR0VUXHMqLFxzKlwkX0NPT0tJRVxzKixccypcJF9GSUxFUyI7aToyNzA7czozNDoiZ2V0ZW52XCgiSFRUUF9IT1NUIlwpXC4nIH4gU2hlbGwgSSI7aToyNzE7czo0MzoiZXZhbC9cKlwqL1woImV2YWxcKGd6aW5mbGF0ZVwoYmFzZTY0X2RlY29kZSI7aToyNzI7czoyNToiYXNzZXJ0XChcJFthLXpBLVowLTlfXStcKCI7aToyNzM7czoxODoiXCRkZWZhY2VyPSdSZVpLMkxMIjtpOjI3NDtzOjE5OiI8JVxzKmV2YWxccytyZXF1ZXN0IjtpOjI3NTtzOjMxOiJuZXdfdGltZVwoXCRwYXRoMmZpbGUsXCRHTE9CQUxTIjtpOjI3NjtzOjUzOiJcJHN0cj1zdHJfcmVwbGFjZVwoIlxbdFxkK1xdIlxzKixccyoiPFw/IixccypcJHJlc1wpOyI7aToyNzc7czo5NjoiXCRfX2E9IlthLXpBLVowLTlfXSsiO1xzKlwkX19hXHMqPVxzKnN0cl9yZXBsYWNlXCgiW2EtekEtWjAtOV9dKyIsXHMqIlthLXpBLVowLTlfXSsiLFxzKlwkX19hXCk7IjtpOjI3ODtzOjQ0OiI8IS0tXHd7MzJ9LS0+PFw/cGhwXHMqQG9iX3N0YXJ0XChcKTtAaW5pX3NldCI7aToyNzk7czo0MjoiaWZcKGlzc2V0XChcJF9HRVRcW3BocFxdXClcKVxzKntcJGZ1bmN0aW9uIjtpOjI4MDtzOjI4OiJcJHNcKCJ+XFtkaXNjdXpcXX5lIixcJF9QT1NUIjtpOjI4MTtzOjQxOiJQbGdTeXN0ZW1YY2FsZW5kYXJIZWxwZXI6OmdldEluc3RhbmNlXChcKSI7aToyODI7czo2MjoiaXNfZGlyX2VtcHR5XChcJF9QT1NUXFtbJyJdZGlyZWN0b3J5WyciXVxdXClcKVxzKntccyplY2hvXHMrMTsiO2k6MjgzO3M6MzI6ImlmXChpc3NldFwoXCRfUE9TVFxbWyciXV9fYnNjb2RlIjtpOjI4NDtzOjM1OiJiYXNlNjRfZW5jb2RlXChjbGVhbl91cmxcKFwkX1NFUlZFUiI7aToyODU7czozMDoiXCRfR0VUXFtbJyJdbW9kWyciXVxdPT1bJyJdMFhYIjtpOjI4NjtzOjQ0OiJcJGZvbGRlclwuWyciXS9wbGVhc2VfcmVuYW1lX1VOWklQRklSU1RcLnppcCI7aToyODc7czo0MzoiQFwkc3RyaW5nc1woc3RyX3JvdDEzXCgncmlueVwob25mcjY0X3FycGJxciI7aToyODg7czo2NzoiXCR0aGlzLT5zZXJ2ZXJccyo9XHMqWyciXWh0dHA6Ly9bJyJdXC5cJHRoaXMtPnNlcnZlclwuWyciXS9pbWcvXD9xPSI7aToyODk7czo0NzoiZWNob1xzKiI8Y2VudGVyPjxiPkRvbmVccyo9PT5ccypcJHVzZXJmaWxlX25hbWUiO2k6MjkwO3M6OTQ6ImZpbGVfZ2V0X2NvbnRlbnRzXChcJFthLXpBLVowLTlfXStcKTtccypbYS16QS1aMC05X10rXChbJyJdaHR0cHM6Ly9kbFwuZHJvcGJveHVzZXJjb250ZW50XC5jb20iO2k6MjkxO3M6NjA6ImlmXChmaWxlX2V4aXN0c1woXCRuZXdQYXRoXClcKVxzKntccyplY2hvXHMqInB1Ymxpc2ggc3VjY2VzcyI7aToyOTI7czo1MzoiZnVuY3Rpb25ccytLaWxsTWVcKFwpXHMqe1xzKnVubGlua1woXHMqTXlGaWxlTmFtZVwoXCkiO2k6MjkzO3M6NjE6IjxcP3BocFxzKmVycm9yX3JlcG9ydGluZ1woRV9FUlJPUlwpO1xzKlwkcmVtb3RlX3BhdGg9Imh0dHA6Ly8iO2k6Mjk0O3M6NDQ6ImVjaG9ccytwaHBfdW5hbWVcKFwpO1xzKkB1bmxpbmtcKF9fRklMRV9fXCk7IjtpOjI5NTtzOjUxOiI8dGl0bGU+PFw/cGhwXHMrZWNob1xzK1wkc2hlbGxfdGl0bGU7XHMrXD8+PC90aXRsZT4iO2k6Mjk2O3M6NTY6ImNoclwob3JkXChcJHN0clxbXCRpXF1cKVxzKlxeXHMqXCRrZXlcKTtccypldmFsXChcJGV2XCk7IjtpOjI5NztzOjMwOiJcJHdwX193cD1cJHdwX193cFwoc3RyX3JlcGxhY2UiO2k6Mjk4O3M6MTg6IjxcP3BocFxzKlwkd3BfX3dwPSI7aToyOTk7czoyNDoiPFw/cGhwXHMqZXZhbFwoWyciXVxceDY1IjtpOjMwMDtzOjc3OiJAcHJlZ19yZXBsYWNlXChbJyJdL1woXC5cKlwpL2VbJyJdXHMqLFxzKkBcJF8oR0VUfFBPU1R8U0VSVkVSfENPT0tJRXxSRVFVRVNUKSI7aTozMDE7czoyMjoiPHRpdGxlPlczTGNvbWU8L3RpdGxlPiI7aTozMDI7czo3NToiaWZcKHN0cmlzdHJcKFwkZmlsZXNcW1wkaVxdLFxzKlsnIl1waHBbJyJdXClcKVxzKntccypcJHRpbWVccyo9XHMqZmlsZW10aW1lIjtpOjMwMztzOjc0OiJcKVwpe1xzKmluY2x1ZGVcKGdldGN3ZFwoXClcLlsnIl0vW2EtekEtWjAtOV9dK1wucGhwWyciXVwpO1xzKmV4aXQ7fVxzKlw/PiI7aTozMDQ7czoyOToiPHRpdGxlPlsnIl1cLnVjZmlyc3RcKFwka2V5XCkiO2k6MzA1O3M6MTg6IjxcP3BocFxzKi9cKlxzKldTTyI7aTozMDY7czozMDoiZnVuY3Rpb25fZXhpc3RzXCgiYzk5X3Nlc3NfcHV0IjtpOjMwNztzOjIxOiIzeHAxcjNccypDeWJlclxzKkFybXkiO2k6MzA4O3M6Mzg6ImZpbGVfZ2V0X2NvbnRlbnRzXCh+XHMqYmFzZTY0X2RlY29kZVwoIjtpOjMwOTtzOjQ3OiJoZXhkZWNcKHN1YnN0clwobWQ1XChcJF9TRVJWRVJcW1snIl1SRVFVRVNUX1VSSSI7aTozMTA7czo4Njoicm9vdF9wYXRoPXN1YnN0clwoXCRhYnNvbHV0ZXBhdGgsMCxzdHJwb3NcKFwkYWJzb2x1dGVwYXRoLFwkbG9jYWxwYXRoXClcKTtpbmNsdWRlX29uY2UiO2k6MzExO3M6NTU6IlwkX1NFUlZFUlxbIlJFTU9URV9BRERSIlxdO2lmXChcKHByZWdfbWF0Y2hcKCIvNjlcLjQyXC4iO2k6MzEyO3M6NDE6IjxcP3BocFxzKmlmXChpc3NldFwoXCRfR0VUXFtwaHBcXVwpXClccyp7IjtpOjMxMztzOjU5OiJcKVwpe2lmXChpc3NldFwoXCRfRklMRVNcW1snIl1pbVsnIl1cXVwpXCl7XCRkaW09Z2V0Y3dkXChcKSI7aTozMTQ7czozMzoiY2xhc3NccytKU1lTT1BFUkFUSU9OX1NldFBhc3N3b3JkIjtpOjMxNTtzOjQ3OiJcKTthcnJheV9maWx0ZXJcKFwkbWNkYXRhXHMqLFxzKmJhc2U2NF9kZWNvZGVcKCI7aTozMTY7czo1OToiPFw/cGhwIGlmXChcJG1lc3NhZ2VcKSBlY2hvICI8cD5cJG1lc3NhZ2U8L3A+IjsgXD8+XHMqPGZvcm0iO2k6MzE3O3M6ODM6InRvdWNoXChkaXJuYW1lXChfX0ZJTEVfX1wpLFxzKlwkdGltZVwpO3RvdWNoXChcJF9TRVJWRVJcW1snIl1TQ1JJUFRfRklMRU5BTUVbJyJdXF0sIjtpOjMxODtzOjE3OiI8dGl0bGU+RmFrZVNlbmRlciI7aTozMTk7czo5NDoiXCRDb25mXHMqPVxzKkAqZmlsZV9nZXRfY29udGVudHNcKFwkcGdcLlsnIl0vXD9kPVsnIl1ccypcLlxzKlwkX1NFUlZFUlxbWyciXUhUVFBfSE9TVFsnIl1cXVwpOyI7aTozMjA7czo2MDoiPFw/XHMqaW5jbHVkZVwoWyciXVsnIl1cLlwkZHJvb3RcLlsnIl0vYml0cml4L2ltYWdlcy9pYmxvY2svIjtpOjMyMTtzOjY4OiJcJGZpbGVcW1wka2V5XF1ccyo9XHMqXCRleFxbMFxdXC5cJGxpbmtcLlsnIl08L2JvZHk+WyciXVwuXCRleFxbMVxdOyI7aTozMjI7czoxMTI6IlwkXHcrXFtcJFx3K1xdPWNoclwob3JkXChcJFx3K1xbXCRcdytcXVwpXF5vcmRcKFwkXHcrXFtcJFx3KyVcJFx3K1xdXClcKTtyZXR1cm5ccypcJFx3Kzt9cHJpdmF0ZSBzdGF0aWMgZnVuY3Rpb24iO2k6MzIzO3M6NjY6ImlmXHMqXChccyptb3ZlX3VwbG9hZGVkX2ZpbGVcKFxzKlwkbmF6d2FfcGxpa1xzKixccypcJHVwbG9hZGZpbGVcKSI7aTozMjQ7czozNjoiaWZcKHN0cnN0clwoXCR0ZW1wU3RyLFsnIl0vL2ZpbGUgZW5kIjtpOjMyNTtzOjEyNjoiXGIoZnRwX2V4ZWN8c3lzdGVtfHNoZWxsX2V4ZWN8cGFzc3RocnV8cG9wZW58cHJvY19vcGVuKVxzKlwoKlxzKkAqXCRfUE9TVFxzKlxbXHMqWyciXS4rP1snIl1ccypcXVxzKlwuXHMqIlxzKjJccyo+XHMqJjFccypbJyJdIjtpOjMyNjtzOjg4OiJcYihmdHBfZXhlY3xzeXN0ZW18c2hlbGxfZXhlY3xwYXNzdGhydXxwb3Blbnxwcm9jX29wZW4pXHMqXCgqXHMqWyciXXVuYW1lXHMrLWFbJyJdXHMqXCkqIjtpOjMyNztzOjg5OiJAKmFzc2VydFxzKlwoKlxzKlwkXyhHRVR8UE9TVHxTRVJWRVJ8Q09PS0lFfFJFUVVFU1QpXHMqXFtccypbJyJdezAsMX0uKz9bJyJdezAsMX1ccypcXVxzKiI7aTozMjg7czoyODoicGhwXHMrWyciXVxzKlwuXHMqXCR3c29fcGF0aCI7aTozMjk7czo1MjoiZmluZFxzKy9ccystbmFtZVxzK1wuc3NoXHMrPlxzK1wkZGlyL3NzaGtleXMvc3Noa2V5cyI7aTozMzA7czo0NToic3lzdGVtXHMqXCgqXHMqWyciXXswLDF9d2hvYW1pWyciXXswLDF9XHMqXCkqIjtpOjMzMTtzOjg4OiJjdXJsX3NldG9wdFxzKlwoXHMqXCRjaFxzKixccypDVVJMT1BUX1VSTFxzKixccypbJyJdezAsMX1odHRwOi8vXCRob3N0OlxkK1snIl17MCwxfVxzKlwpIjtpOjMzMjtzOjMzOiJldmFsXChccypcJFxzKntccypcJFthLXpBLVowLTlfXSsiO30="));
@@ -878,37 +380,33 @@ $g_SusDB = unserialize(base64_decode("YToxMzE6e2k6MDtzOjE0OiJAKmV4dHJhY3RccypcKC
 $g_SusDBPrio = unserialize(base64_decode("YToxMjE6e2k6MDtpOjA7aToxO2k6MDtpOjI7aTowO2k6MztpOjA7aTo0O2k6MDtpOjU7aTowO2k6NjtpOjA7aTo3O2k6MDtpOjg7aToxO2k6OTtpOjE7aToxMDtpOjA7aToxMTtpOjA7aToxMjtpOjA7aToxMztpOjA7aToxNDtpOjA7aToxNTtpOjA7aToxNjtpOjA7aToxNztpOjA7aToxODtpOjA7aToxOTtpOjA7aToyMDtpOjA7aToyMTtpOjA7aToyMjtpOjA7aToyMztpOjA7aToyNDtpOjA7aToyNTtpOjA7aToyNjtpOjA7aToyNztpOjA7aToyODtpOjA7aToyOTtpOjE7aTozMDtpOjE7aTozMTtpOjA7aTozMjtpOjA7aTozMztpOjA7aTozNDtpOjA7aTozNTtpOjA7aTozNjtpOjA7aTozNztpOjA7aTozODtpOjA7aTozOTtpOjA7aTo0MDtpOjA7aTo0MTtpOjA7aTo0MjtpOjA7aTo0MztpOjA7aTo0NDtpOjA7aTo0NTtpOjA7aTo0NjtpOjA7aTo0NztpOjA7aTo0ODtpOjA7aTo0OTtpOjA7aTo1MDtpOjA7aTo1MTtpOjA7aTo1MjtpOjA7aTo1MztpOjA7aTo1NDtpOjA7aTo1NTtpOjA7aTo1NjtpOjE7aTo1NztpOjA7aTo1ODtpOjA7aTo1OTtpOjI7aTo2MDtpOjE7aTo2MTtpOjA7aTo2MjtpOjA7aTo2MztpOjA7aTo2NDtpOjI7aTo2NTtpOjA7aTo2NjtpOjA7aTo2NztpOjA7aTo2ODtpOjI7aTo2OTtpOjE7aTo3MDtpOjA7aTo3MTtpOjA7aTo3MjtpOjE7aTo3MztpOjA7aTo3NDtpOjE7aTo3NTtpOjE7aTo3NjtpOjI7aTo3NztpOjE7aTo3ODtpOjM7aTo3OTtpOjI7aTo4MDtpOjA7aTo4MTtpOjI7aTo4MjtpOjA7aTo4MztpOjA7aTo4NDtpOjI7aTo4NTtpOjA7aTo4NjtpOjA7aTo4NztpOjA7aTo4ODtpOjA7aTo4OTtpOjE7aTo5MDtpOjE7aTo5MTtpOjE7aTo5MjtpOjE7aTo5MztpOjA7aTo5NDtpOjI7aTo5NTtpOjI7aTo5NjtpOjI7aTo5NztpOjI7aTo5ODtpOjI7aTo5OTtpOjE7aToxMDA7aToxO2k6MTAxO2k6MztpOjEwMjtpOjM7aToxMDM7aToxO2k6MTA0O2k6MztpOjEwNTtpOjM7aToxMDY7aToyO2k6MTA3O2k6MDtpOjEwODtpOjM7aToxMDk7aToxO2k6MTEwO2k6MTtpOjExMTtpOjM7aToxMTI7aTozO2k6MTEzO2k6MztpOjExNDtpOjE7aToxMTU7aToxO2k6MTE2O2k6MTtpOjExNztpOjQ7aToxMTg7aToxO2k6MTE5O2k6MztpOjEyMDtpOjA7fQ=="));
 
 //END_SIG
-////////////////////////////////////////////////////////////////////////////
 if (!isCli() && !isset($_SERVER['HTTP_USER_AGENT'])) {
-  echo "#####################################################\n";
-  echo "# Error: cannot run on php-cgi. Requires php as cli #\n";
-  echo "#                                                   #\n";
-  echo "# See FAQ: http://revisium.com/ai/faq.php           #\n";
-  echo "#####################################################\n";
-  exit;
+    echo "#####################################################\n";
+    echo "# Error: cannot run on php-cgi. Requires php as cli #\n";
+    echo "#                                                   #\n";
+    echo "# See FAQ: http://revisium.com/ai/faq.php           #\n";
+    echo "#####################################################\n";
+    exit;
 }
 
 
 if (version_compare(phpversion(), '5.3.1', '<')) {
-  echo "#####################################################\n";
-  echo "# Warning: PHP Version < 5.3.1                      #\n";
-  echo "# Some function might not work properly             #\n";
-  echo "# See FAQ: http://revisium.com/ai/faq.php           #\n";
-  echo "#####################################################\n";
-  exit;
+    echo "#####################################################\n";
+    echo "# Warning: PHP Version < 5.3.1                      #\n";
+    echo "# Some function might not work properly             #\n";
+    echo "# See FAQ: http://revisium.com/ai/faq.php           #\n";
+    echo "#####################################################\n";
+    exit;
 }
 
 if (!(function_exists("file_put_contents") && is_callable("file_put_contents"))) {
     echo "#####################################################\n";
-	echo "file_put_contents() is disabled. Cannot proceed.\n";
-    echo "#####################################################\n";	
+    echo "file_put_contents() is disabled. Cannot proceed.\n";
+    echo "#####################################################\n";
     exit;
 }
-                              
-define('AI_VERSION', '20160817');
 
-////////////////////////////////////////////////////////////////////////////
-
+const AI_VERSION = '20160817';
 $l_Res = '';
 
 $g_Structure = array();
@@ -939,50 +437,51 @@ $g_FoundTotalDirs = 0;
 $g_FoundTotalFiles = 0;
 
 if (!isCli()) {
-   $defaults['site_url'] = 'http://' . $_SERVER['HTTP_HOST'] . '/'; 
+    $defaults['site_url'] = 'http://' . $_SERVER['HTTP_HOST'] . '/';
 }
 
 define('CRC32_LIMIT', pow(2, 31) - 1);
-define('CRC32_DIFF', CRC32_LIMIT * 2 -2);
+const CRC32_DIFF = CRC32_LIMIT * 2 - 2;
 
 error_reporting(E_ALL ^ E_NOTICE ^ E_WARNING);
 srand(time());
 
 set_time_limit(0);
 ini_set('max_execution_time', '900000');
-ini_set('realpath_cache_size','16M');
-ini_set('realpath_cache_ttl','1200');
-ini_set('pcre.backtrack_limit','150000');
-ini_set('pcre.recursion_limit','150000');
+ini_set('realpath_cache_size', '16M');
+ini_set('realpath_cache_ttl', '1200');
+ini_set('pcre.backtrack_limit', '150000');
+ini_set('pcre.recursion_limit', '150000');
 
 if (!function_exists('stripos')) {
-	function stripos($par_Str, $par_Entry, $Offset = 0) {
-		return strpos(strtolower($par_Str), strtolower($par_Entry), $Offset);
-	}
+    function stripos($par_Str, $par_Entry, $Offset = 0)
+    {
+        return strpos(strtolower($par_Str), strtolower($par_Entry), $Offset);
+    }
 }
 
-define('CMS_BITRIX', 'Bitrix');
-define('CMS_WORDPRESS', 'Wordpress');
-define('CMS_JOOMLA', 'Joomla');
-define('CMS_DLE', 'Data Life Engine');
-define('CMS_IPB', 'Invision Power Board');
-define('CMS_WEBASYST', 'WebAsyst');
-define('CMS_OSCOMMERCE', 'OsCommerce');
-define('CMS_DRUPAL', 'Drupal');
-define('CMS_MODX', 'MODX');
-define('CMS_INSTANTCMS', 'Instant CMS');
-define('CMS_PHPBB', 'PhpBB');
-define('CMS_VBULLETIN', 'vBulletin');
-define('CMS_SHOPSCRIPT', 'PHP ShopScript Premium');
-
-define('CMS_VERSION_UNDEFINED', '0.0');
+const CMS_BITRIX = 'Bitrix';
+const CMS_WORDPRESS = 'Wordpress';
+const CMS_JOOMLA = 'Joomla';
+const CMS_DLE = 'Data Life Engine';
+const CMS_IPB = 'Invision Power Board';
+const CMS_WEBASYST = 'WebAsyst';
+const CMS_OSCOMMERCE = 'OsCommerce';
+const CMS_DRUPAL = 'Drupal';
+const CMS_MODX = 'MODX';
+const CMS_INSTANTCMS = 'Instant CMS';
+const CMS_PHPBB = 'PhpBB';
+const CMS_VBULLETIN = 'vBulletin';
+const CMS_SHOPSCRIPT = 'PHP ShopScript Premium';
+const CMS_VERSION_UNDEFINED = '0.0';
 
 class CmsVersionDetector {
     private $root_path;
     private $versions;
     private $types;
 
-    public function __construct($root_path = '.') {
+    public function __construct($root_path = '.')
+    {
         $this->root_path = $root_path;
         $this->versions = array();
         $this->types = array();
@@ -994,375 +493,377 @@ class CmsVersionDetector {
 
         foreach ($dir_list as $dir) {
             if ($this->checkBitrix($dir, $version)) {
-               $this->addCms(CMS_BITRIX, $version);
+                $this->addCms(CMS_BITRIX, $version);
             }
 
             if ($this->checkWordpress($dir, $version)) {
-               $this->addCms(CMS_WORDPRESS, $version);
+                $this->addCms(CMS_WORDPRESS, $version);
             }
 
             if ($this->checkJoomla($dir, $version)) {
-               $this->addCms(CMS_JOOMLA, $version);
+                $this->addCms(CMS_JOOMLA, $version);
             }
 
             if ($this->checkDle($dir, $version)) {
-               $this->addCms(CMS_DLE, $version);
+                $this->addCms(CMS_DLE, $version);
             }
 
             if ($this->checkIpb($dir, $version)) {
-               $this->addCms(CMS_IPB, $version);
+                $this->addCms(CMS_IPB, $version);
             }
 
             if ($this->checkWebAsyst($dir, $version)) {
-               $this->addCms(CMS_WEBASYST, $version);
+                $this->addCms(CMS_WEBASYST, $version);
             }
 
             if ($this->checkOsCommerce($dir, $version)) {
-               $this->addCms(CMS_OSCOMMERCE, $version);
+                $this->addCms(CMS_OSCOMMERCE, $version);
             }
 
             if ($this->checkDrupal($dir, $version)) {
-               $this->addCms(CMS_DRUPAL, $version);
+                $this->addCms(CMS_DRUPAL, $version);
             }
 
             if ($this->checkMODX($dir, $version)) {
-               $this->addCms(CMS_MODX, $version);
+                $this->addCms(CMS_MODX, $version);
             }
 
             if ($this->checkInstantCms($dir, $version)) {
-               $this->addCms(CMS_INSTANTCMS, $version);
+                $this->addCms(CMS_INSTANTCMS, $version);
             }
 
             if ($this->checkPhpBb($dir, $version)) {
-               $this->addCms(CMS_PHPBB, $version);
+                $this->addCms(CMS_PHPBB, $version);
             }
 
             if ($this->checkVBulletin($dir, $version)) {
-               $this->addCms(CMS_VBULLETIN, $version);
+                $this->addCms(CMS_VBULLETIN, $version);
             }
 
             if ($this->checkPhpShopScript($dir, $version)) {
-               $this->addCms(CMS_SHOPSCRIPT, $version);
+                $this->addCms(CMS_SHOPSCRIPT, $version);
             }
 
         }
     }
 
-    function getDirList($target) {
-       $remove = array('.', '..'); 
-       $directories = array_diff(scandir($target), $remove);
+    function getDirList($target): array {
+        $remove = array('.', '..');
+        $directories = array_diff(scandir($target), $remove);
 
-       $res = array();
-           
-       foreach($directories as $value) 
-       { 
-          if(is_dir($target . '/' . $value)) 
-          {
-             $res[] = $target . '/' . $value; 
-          } 
-       }
+        $res = array();
 
-       return $res;
+        foreach ($directories as $value) {
+            if (is_dir($target . '/' . $value)) {
+                $res[] = $target . '/' . $value;
+            }
+        }
+
+        return $res;
     }
 
-    function isCms($name, $version) {
-		for ($i = 0; $i < count($this->types); $i++) {
-			if ((strpos($this->types[$i], $name) !== false) 
-				&& 
-			    (strpos($this->versions[$i], $version) !== false)) {
-				return true;
-			}
-		}
-    	
-		return false;
+    function isCms($name, $version): bool {
+        for ($i = 0; $i < count($this->types); $i++) {
+            if ((strpos($this->types[$i], $name) !== false)
+                &&
+                (strpos($this->versions[$i], $version) !== false)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
-    function getCmsList() {
-      return $this->types;
+//    function getCmsList(): array {
+//        return $this->types;
+//    }
+//
+//    function getCmsVersions(): array {
+//        return $this->versions;
+//    }
+
+    function getCmsNumber(): int {
+        return count($this->types);
     }
 
-    function getCmsVersions() {
-      return $this->versions;
+    function getCmsName($index = 0)
+    {
+        return $this->types[$index];
     }
 
-    function getCmsNumber() {
-      return count($this->types);
+    function getCmsVersion($index = 0)
+    {
+        return $this->versions[$index];
     }
 
-    function getCmsName($index = 0) {
-      return $this->types[$index];
+    private function addCms($type, $version)
+    {
+        $this->types[] = $type;
+        $this->versions[] = $version;
     }
 
-    function getCmsVersion($index = 0) {
-      return $this->versions[$index];
+    private function checkBitrix($dir, &$version): bool {
+        $version = CMS_VERSION_UNDEFINED;
+        $res = false;
+
+        if (file_exists($dir . '/bitrix')) {
+            $res = true;
+
+            $tmp_content = @file_get_contents($this->root_path . '/bitrix/modules/main/classes/general/version.php');
+            if (preg_match('|define\("SM_VERSION","(.+?)"\)|smi', $tmp_content, $tmp_ver)) {
+                $version = $tmp_ver[1];
+            }
+
+        }
+
+        return $res;
     }
 
-    private function addCms($type, $version) {
-       $this->types[] = $type;
-       $this->versions[] = $version;
+    private function checkWordpress($dir, &$version): bool {
+        $version = CMS_VERSION_UNDEFINED;
+        $res = false;
+
+        if (file_exists($dir . '/wp-admin')) {
+            $res = true;
+
+            $tmp_content = @file_get_contents($dir . '/wp-includes/version.php');
+            if (preg_match('|\$wp_version\s*=\s*\'(.+?)\'|smi', $tmp_content, $tmp_ver)) {
+                $version = $tmp_ver[1];
+            }
+        }
+
+        return $res;
     }
 
-    private function checkBitrix($dir, &$version) {
-       $version = CMS_VERSION_UNDEFINED;
-       $res = false;
+    private function checkJoomla($dir, &$version): bool {
+        $version = CMS_VERSION_UNDEFINED;
+        $res = false;
 
-       if (file_exists($dir .'/bitrix')) {
-          $res = true;
+        if (file_exists($dir . '/libraries/joomla')) {
+            $res = true;
 
-          $tmp_content = @file_get_contents($this->root_path .'/bitrix/modules/main/classes/general/version.php');
-          if (preg_match('|define\("SM_VERSION","(.+?)"\)|smi', $tmp_content, $tmp_ver)) {
-             $version = $tmp_ver[1];
-          }
+            // for 1.5.x
+            $tmp_content = @file_get_contents($dir . '/libraries/joomla/version.php');
+            if (preg_match('|var\s+\$RELEASE\s*=\s*\'(.+?)\'|smi', $tmp_content, $tmp_ver)) {
+                $version = $tmp_ver[1];
 
-       }
+                if (preg_match('|var\s+\$DEV_LEVEL\s*=\s*\'(.+?)\'|smi', $tmp_content, $tmp_ver)) {
+                    $version .= '.' . $tmp_ver[1];
+                }
+            }
 
-       return $res;
+            // for 1.7.x
+            $tmp_content = @file_get_contents($dir . '/includes/version.php');
+            if (preg_match('|public\s+\$RELEASE\s*=\s*\'(.+?)\'|smi', $tmp_content, $tmp_ver)) {
+                $version = $tmp_ver[1];
+
+                if (preg_match('|public\s+\$DEV_LEVEL\s*=\s*\'(.+?)\'|smi', $tmp_content, $tmp_ver)) {
+                    $version .= '.' . $tmp_ver[1];
+                }
+            }
+
+            // for 2.5.x and 3.x
+            $tmp_content = @file_get_contents($dir . '/libraries/cms/version/version.php');
+            if (preg_match('|public\s+\$RELEASE\s*=\s*\'(.+?)\'|smi', $tmp_content, $tmp_ver)) {
+                $version = $tmp_ver[1];
+
+                if (preg_match('|public\s+\$DEV_LEVEL\s*=\s*\'(.+?)\'|smi', $tmp_content, $tmp_ver)) {
+                    $version .= '.' . $tmp_ver[1];
+                }
+            }
+
+        }
+
+        return $res;
     }
 
-    private function checkWordpress($dir, &$version) {
-       $version = CMS_VERSION_UNDEFINED;
-       $res = false;
+    private function checkDle($dir, &$version): bool {
+        $version = CMS_VERSION_UNDEFINED;
+        $res = false;
 
-       if (file_exists($dir .'/wp-admin')) {
-          $res = true;
+        if (file_exists($dir . '/engine/engine.php')) {
+            $res = true;
 
-          $tmp_content = @file_get_contents($dir .'/wp-includes/version.php');
-          if (preg_match('|\$wp_version\s*=\s*\'(.+?)\'|smi', $tmp_content, $tmp_ver)) {
-             $version = $tmp_ver[1];
-          }
-       }
+            $tmp_content = @file_get_contents($dir . '/engine/data/config.php');
+            if (preg_match('|\'version_id\'\s*=>\s*"(.+?)"|smi', $tmp_content, $tmp_ver)) {
+                $version = $tmp_ver[1];
+            }
 
-       return $res;
+            $tmp_content = @file_get_contents($dir . '/install.php');
+            if (preg_match('|\'version_id\'\s*=>\s*"(.+?)"|smi', $tmp_content, $tmp_ver)) {
+                $version = $tmp_ver[1];
+            }
+
+        }
+
+        return $res;
     }
 
-    private function checkJoomla($dir, &$version) {
-       $version = CMS_VERSION_UNDEFINED;
-       $res = false;
+    private function checkIpb($dir, &$version): bool {
+        $version = CMS_VERSION_UNDEFINED;
+        $res = false;
 
-       if (file_exists($dir .'/libraries/joomla')) {
-          $res = true;
+        if (file_exists($dir . '/ips_kernel')) {
+            $res = true;
 
-          // for 1.5.x
-          $tmp_content = @file_get_contents($dir .'/libraries/joomla/version.php');
-          if (preg_match('|var\s+\$RELEASE\s*=\s*\'(.+?)\'|smi', $tmp_content, $tmp_ver)) {
-             $version = $tmp_ver[1];
+            $tmp_content = @file_get_contents($dir . '/ips_kernel/class_xml.php');
+            if (preg_match('|IP.Board\s+v([0-9.]+)|si', $tmp_content, $tmp_ver)) {
+                $version = $tmp_ver[1];
+            }
 
-             if (preg_match('|var\s+\$DEV_LEVEL\s*=\s*\'(.+?)\'|smi', $tmp_content, $tmp_ver)) {
-                $version .= '.' . $tmp_ver[1];
-             }
-          }
+        }
 
-          // for 1.7.x
-          $tmp_content = @file_get_contents($dir .'/includes/version.php');
-          if (preg_match('|public\s+\$RELEASE\s*=\s*\'(.+?)\'|smi', $tmp_content, $tmp_ver)) {
-             $version = $tmp_ver[1];
-
-             if (preg_match('|public\s+\$DEV_LEVEL\s*=\s*\'(.+?)\'|smi', $tmp_content, $tmp_ver)) {
-                $version .= '.' . $tmp_ver[1];
-             }
-          }
-
-          // for 2.5.x and 3.x
-          $tmp_content = @file_get_contents($dir .'/libraries/cms/version/version.php');
-          if (preg_match('|public\s+\$RELEASE\s*=\s*\'(.+?)\'|smi', $tmp_content, $tmp_ver)) {
-             $version = $tmp_ver[1];
-
-             if (preg_match('|public\s+\$DEV_LEVEL\s*=\s*\'(.+?)\'|smi', $tmp_content, $tmp_ver)) {
-                $version .= '.' . $tmp_ver[1];
-             }
-          }
-
-       }
-
-       return $res;
+        return $res;
     }
 
-    private function checkDle($dir, &$version) {
-       $version = CMS_VERSION_UNDEFINED;
-       $res = false;
+    private function checkWebAsyst($dir, &$version): bool {
+        $version = CMS_VERSION_UNDEFINED;
+        $res = false;
 
-       if (file_exists($dir .'/engine/engine.php')) {
-          $res = true;
+        if (file_exists($dir . '/wbs/installer')) {
+            $res = true;
 
-          $tmp_content = @file_get_contents($dir . '/engine/data/config.php');
-          if (preg_match('|\'version_id\'\s*=>\s*"(.+?)"|smi', $tmp_content, $tmp_ver)) {
-             $version = $tmp_ver[1];
-          }
+            $tmp_content = @file_get_contents($dir . '/license.txt');
+            if (preg_match('|v([0-9.]+)|si', $tmp_content, $tmp_ver)) {
+                $version = $tmp_ver[1];
+            }
 
-          $tmp_content = @file_get_contents($dir . '/install.php');
-          if (preg_match('|\'version_id\'\s*=>\s*"(.+?)"|smi', $tmp_content, $tmp_ver)) {
-             $version = $tmp_ver[1];
-          }
+        }
 
-       }
-
-       return $res;
+        return $res;
     }
 
-    private function checkIpb($dir, &$version) {
-       $version = CMS_VERSION_UNDEFINED;
-       $res = false;
+    private function checkOsCommerce($dir, &$version): bool {
+        $version = CMS_VERSION_UNDEFINED;
+        $res = false;
 
-       if (file_exists($dir . '/ips_kernel')) {
-          $res = true;
+        if (file_exists($dir . '/includes/version.php')) {
+            $res = true;
 
-          $tmp_content = @file_get_contents($dir . '/ips_kernel/class_xml.php');
-          if (preg_match('|IP.Board\s+v([0-9\.]+)|si', $tmp_content, $tmp_ver)) {
-             $version = $tmp_ver[1];
-          }
+            $tmp_content = @file_get_contents($dir . '/includes/version.php');
+            if (preg_match('|([0-9.]+)|smi', $tmp_content, $tmp_ver)) {
+                $version = $tmp_ver[1];
+            }
 
-       }
+        }
 
-       return $res;
+        return $res;
     }
 
-    private function checkWebAsyst($dir, &$version) {
-       $version = CMS_VERSION_UNDEFINED;
-       $res = false;
+    private function checkDrupal($dir, &$version): bool {
+        $version = CMS_VERSION_UNDEFINED;
+        $res = false;
 
-       if (file_exists($dir . '/wbs/installer')) {
-          $res = true;
+        if (file_exists($dir . '/sites/all')) {
+            $res = true;
 
-          $tmp_content = @file_get_contents($dir . '/license.txt');
-          if (preg_match('|v([0-9\.]+)|si', $tmp_content, $tmp_ver)) {
-             $version = $tmp_ver[1];
-          }
+            $tmp_content = @file_get_contents($dir . '/CHANGELOG.txt');
+            if (preg_match('|Drupal\s+([0-9.]+)|smi', $tmp_content, $tmp_ver)) {
+                $version = $tmp_ver[1];
+            }
 
-       }
+        }
 
-       return $res;
+        return $res;
     }
 
-    private function checkOsCommerce($dir, &$version) {
-       $version = CMS_VERSION_UNDEFINED;
-       $res = false;
+    private function checkMODX($dir, &$version): bool {
+        $version = CMS_VERSION_UNDEFINED;
+        $res = false;
 
-       if (file_exists($dir . '/includes/version.php')) {
-          $res = true;
+        if (file_exists($dir . '/manager/assets')) {
+            $res = true;
 
-          $tmp_content = @file_get_contents($dir . '/includes/version.php');
-          if (preg_match('|([0-9\.]+)|smi', $tmp_content, $tmp_ver)) {
-             $version = $tmp_ver[1];
-          }
+            // no way to pick up version
+        }
 
-       }
-
-       return $res;
+        return $res;
     }
 
-    private function checkDrupal($dir, &$version) {
-       $version = CMS_VERSION_UNDEFINED;
-       $res = false;
+    private function checkInstantCms($dir, &$version): bool {
+        $version = CMS_VERSION_UNDEFINED;
+        $res = false;
 
-       if (file_exists($dir . '/sites/all')) {
-          $res = true;
+        if (file_exists($dir . '/plugins/p_usertab')) {
+            $res = true;
 
-          $tmp_content = @file_get_contents($dir . '/CHANGELOG.txt');
-          if (preg_match('|Drupal\s+([0-9\.]+)|smi', $tmp_content, $tmp_ver)) {
-             $version = $tmp_ver[1];
-          }
+            $tmp_content = @file_get_contents($dir . '/index.php');
+            if (preg_match('|InstantCMS\s+v([0-9.]+)|smi', $tmp_content, $tmp_ver)) {
+                $version = $tmp_ver[1];
+            }
 
-       }
+        }
 
-       return $res;
+        return $res;
     }
 
-    private function checkMODX($dir, &$version) {
-       $version = CMS_VERSION_UNDEFINED;
-       $res = false;
+    private function checkPhpBb($dir, &$version): bool {
+        $version = CMS_VERSION_UNDEFINED;
+        $res = false;
 
-       if (file_exists($dir . '/manager/assets')) {
-          $res = true;
+        if (file_exists($dir . '/includes/acp')) {
+            $res = true;
 
-          // no way to pick up version
-       }
+            $tmp_content = @file_get_contents($dir . '/config.php');
+            if (preg_match('|phpBB\s+([0-9.x]+)|smi', $tmp_content, $tmp_ver)) {
+                $version = $tmp_ver[1];
+            }
 
-       return $res;
+        }
+
+        return $res;
     }
 
-    private function checkInstantCms($dir, &$version) {
-       $version = CMS_VERSION_UNDEFINED;
-       $res = false;
+    private function checkVBulletin($dir, &$version): bool {
+        $version = CMS_VERSION_UNDEFINED;
+        $res = false;
 
-       if (file_exists($dir . '/plugins/p_usertab')) {
-          $res = true;
+        if (file_exists($dir . '/core/admincp')) {
+            $res = true;
 
-          $tmp_content = @file_get_contents($dir . '/index.php');
-          if (preg_match('|InstantCMS\s+v([0-9\.]+)|smi', $tmp_content, $tmp_ver)) {
-             $version = $tmp_ver[1];
-          }
+            $tmp_content = @file_get_contents($dir . '/core/api.php');
+            if (preg_match('|vBulletin\s+([0-9.x]+)|smi', $tmp_content, $tmp_ver)) {
+                $version = $tmp_ver[1];
+            }
 
-       }
+        }
 
-       return $res;
+        return $res;
     }
 
-    private function checkPhpBb($dir, &$version) {
-       $version = CMS_VERSION_UNDEFINED;
-       $res = false;
+    private function checkPhpShopScript($dir, &$version): bool {
+        $version = CMS_VERSION_UNDEFINED;
+        $res = false;
 
-       if (file_exists($dir . '/includes/acp')) {
-          $res = true;
+        if (file_exists($dir . '/install/consts.php')) {
+            $res = true;
 
-          $tmp_content = @file_get_contents($dir . '/config.php');
-          if (preg_match('|phpBB\s+([0-9\.x]+)|smi', $tmp_content, $tmp_ver)) {
-             $version = $tmp_ver[1];
-          }
+            $tmp_content = @file_get_contents($dir . '/install/consts.php');
+            if (preg_match('|STRING_VERSION\',\s*\'(.+?)\'|smi', $tmp_content, $tmp_ver)) {
+                $version = $tmp_ver[1];
+            }
 
-       }
+        }
 
-       return $res;
-    }
-
-    private function checkVBulletin($dir, &$version) {
-       $version = CMS_VERSION_UNDEFINED;
-       $res = false;
-
-       if (file_exists($dir . '/core/admincp')) {
-          $res = true;
-
-          $tmp_content = @file_get_contents($dir . '/core/api.php');
-          if (preg_match('|vBulletin\s+([0-9\.x]+)|smi', $tmp_content, $tmp_ver)) {
-             $version = $tmp_ver[1];
-          }
-
-       }
-
-       return $res;
-    }
-
-    private function checkPhpShopScript($dir, &$version) {
-       $version = CMS_VERSION_UNDEFINED;
-       $res = false;
-
-       if (file_exists($dir . '/install/consts.php')) {
-          $res = true;
-
-          $tmp_content = @file_get_contents($dir . '/install/consts.php');
-          if (preg_match('|STRING_VERSION\',\s*\'(.+?)\'|smi', $tmp_content, $tmp_ver)) {
-             $version = $tmp_ver[1];
-          }
-
-       }
-
-       return $res;
+        return $res;
     }
 }
 
 /**
  * Print file
-*/
-function printFile() {
-	$l_FileName = $_GET['fn'];
-	$l_CRC = isset($_GET['c']) ? (int)$_GET['c'] : 0;
-	$l_Content = file_get_contents($l_FileName);
-	$l_FileCRC = realCRC($l_Content);
-	if ($l_FileCRC != $l_CRC) {
-		echo 'Доступ запрещен.';
-		exit;
-	}
-	
-	echo '<pre>' . htmlspecialchars($l_Content) . '</pre>';
+ */
+function printFile()
+{
+    $l_FileName = $_GET['fn'];
+    $l_CRC = isset($_GET['c']) ? (int)$_GET['c'] : 0;
+    $l_Content = file_get_contents($l_FileName);
+    $l_FileCRC = realCRC($l_Content);
+    if ($l_FileCRC != $l_CRC) {
+        echo 'Доступ запрещен.';
+        exit;
+    }
+
+    echo '<pre>' . htmlspecialchars($l_Content) . '</pre>';
 }
 
 /**
@@ -1370,8 +871,8 @@ function printFile() {
  */
 function realCRC($str_in, $full = false)
 {
-        $in = crc32( $full ? normal($str_in) : $str_in );
-        return ($in > CRC32_LIMIT) ? ($in - CRC32_DIFF) : $in;
+    $in = crc32($full ? normal($str_in) : $str_in);
+    return ($in > CRC32_LIMIT) ? ($in - CRC32_DIFF) : $in;
 }
 
 
@@ -1379,17 +880,15 @@ function realCRC($str_in, $full = false)
  * Determine php script is called from the command line interface
  * @return bool
  */
-function isCli()
-{
-	return php_sapi_name() == 'cli';
+function isCli(): bool {
+    return php_sapi_name() == 'cli';
 }
 
 function myCheckSum($str) {
-   return hash('crc32b', $str);
+    return hash('crc32b', $str);
 }
 
- function generatePassword ($length = 9)
-  {
+function generatePassword($length = 9): string {
 
     // start with a blank password
     $password = "";
@@ -1402,35 +901,35 @@ function myCheckSum($str) {
 
     // we refer to the length of $possible a few times, so let's grab it now
     $maxlength = strlen($possible);
-  
+
     // check for length overflow and truncate if necessary
     if ($length > $maxlength) {
-      $length = $maxlength;
+        $length = $maxlength;
     }
-	
-    // set up a counter for how many characters are in the password so far
-    $i = 0; 
-    
-    // add random characters to $password until $length is reached
-    while ($i < $length) { 
 
-      // pick a random character from the possible ones
-      $char = substr($possible, mt_rand(0, $maxlength-1), 1);
-        
-      // have we already used this character in $password?
-      if (!strstr($password, $char)) { 
-        // no, so it's OK to add it onto the end of whatever we've already got...
-        $password .= $char;
-        // ... and increase the counter by one
-        $i++;
-      }
+    // set up a counter for how many characters are in the password so far
+    $i = 0;
+
+    // add random characters to $password until $length is reached
+    while ($i < $length) {
+
+        // pick a random character from the possible ones
+        $char = substr($possible, mt_rand(0, $maxlength - 1), 1);
+
+        // have we already used this character in $password?
+        if (!strstr($password, $char)) {
+            // no, so it's OK to add it onto the end of whatever we've already got...
+            $password .= $char;
+            // ... and increase the counter by one
+            $i++;
+        }
 
     }
 
     // done!
     return $password;
 
-  }
+}
 
 /**
  * Print to console
@@ -1438,133 +937,118 @@ function myCheckSum($str) {
  * @param bool $add_lb Add line break
  * @return void
  */
-function stdOut($text, $add_lb = true)
-{
-	global $BOOL_RESULT;
+function stdOut($text, bool $add_lb = true) {
+    global $BOOL_RESULT;
 
-	if (!isCli())
-		return;
-		
-	if (is_bool($text))
-	{
-		$text = $text ? 'true' : 'false';
-	}
-	else if (is_null($text))
-	{
-		$text = 'null';
-	}
-	if (!is_scalar($text))
-	{
-		$text = print_r($text, true);
-	}
+    if (!isCli())
+        return;
 
- 	if (!$BOOL_RESULT)
- 	{
- 		@fwrite(STDOUT, $text . ($add_lb ? "\n" : ''));
- 	}
+    if (is_bool($text)) {
+        $text = $text ? 'true' : 'false';
+    } else if (is_null($text)) {
+        $text = 'null';
+    }
+    if (!is_scalar($text)) {
+        $text = print_r($text, true);
+    }
+
+    if (!$BOOL_RESULT) {
+        @fwrite(STDOUT, $text . ($add_lb ? "\n" : ''));
+    }
 }
 
 /**
  * Print progress
  * @param int $num Current file
  */
-function printProgress($num, &$par_File)
-{
-	global $g_CriticalPHP, $g_Base64, $g_Phishing, $g_CriticalJS, $g_Iframer;
-	$total_files = $GLOBALS['g_FoundTotalFiles'];
-	$elapsed_time = microtime(true) - START_TIME;
-	$percent = number_format($total_files ? $num*100/$total_files : 0, 1);
-	$stat = '';
-	if ($elapsed_time >= 1)
-	{
-		$elapsed_seconds = round($elapsed_time, 0);
-		$fs = floor($num / $elapsed_seconds);
-		$left_files = $total_files - $num;
-		if ($fs > 0) 
-		{
-		   $left_time = ($left_files / $fs); //ceil($left_files / $fs);
-		   $stat = ' [Avg: ' . round($fs,2) . ' files/s' . ($left_time > 0  ? ' Left: ' . seconds2Human($left_time) : '') . '] [Mlw:' . (count($g_CriticalPHP) + count($g_Base64))  . '|' . (count($g_CriticalJS) + count($g_Iframer) + count($g_Phishing)) . ']';
+function printProgress(int $num, $par_File) {
+    global $g_CriticalPHP, $g_Base64, $g_Phishing, $g_CriticalJS, $g_Iframer;
+    $total_files = $GLOBALS['g_FoundTotalFiles'];
+    $elapsed_time = microtime(true) - START_TIME;
+    $percent = number_format($total_files ? $num * 100 / $total_files : 0, 1);
+    $stat = '';
+    if ($elapsed_time >= 1) {
+        $elapsed_seconds = round($elapsed_time);
+        $fs = floor($num / $elapsed_seconds);
+        $left_files = $total_files - $num;
+        if ($fs > 0) {
+            $left_time = ($left_files / $fs); //ceil($left_files / $fs);
+            $stat = ' [Avg: ' . round($fs, 2) . ' files/s' . ($left_time > 0 ? ' Left: ' . seconds2Human($left_time) : '') . '] [Mlw:' . (count($g_CriticalPHP) + count($g_Base64)) . '|' . (count($g_CriticalJS) + count($g_Iframer) + count($g_Phishing)) . ']';
         }
-	}
+    }
 
-	$l_FN = substr($par_File, -60);
+    $l_FN = substr($par_File, -60);
 
-	$text = "$percent% [$l_FN] $num of {$total_files}. " . $stat;
-	$text = str_pad($text, 160, ' ', STR_PAD_RIGHT);
-	stdOut(str_repeat(chr(8), 160) . $text, false);
+    $text = "$percent% [$l_FN] $num of $total_files. " . $stat;
+    $text = str_pad($text, 160);
+    stdOut(str_repeat(chr(8), 160) . $text, false);
 }
 
 /**
- * Seconds to human readable
+ * Seconds to normal text
  * @param int $seconds
  * @return string
  */
-function seconds2Human($seconds)
-{
-	$r = '';
-	$_seconds = floor($seconds);
-	$ms = $seconds - $_seconds;
-	$seconds = $_seconds;
-	if ($hours = floor($seconds / 3600))
-	{
-		$r .= $hours . (isCli() ? ' h ' : ' час ');
-		$seconds = $seconds % 3600;
-	}
+function seconds2Human(int $seconds): string {
+    $r = '';
+    $_seconds = floor($seconds);
+    $ms = $seconds - $_seconds;
+    $seconds = $_seconds;
+    if ($hours = floor($seconds / 3600)) {
+        $r .= $hours . (isCli() ? ' h ' : ' час ');
+        $seconds = $seconds % 3600;
+    }
 
-	if ($minutes = floor($seconds / 60))
-	{
-		$r .= $minutes . (isCli() ? ' m ' : ' мин ');
-		$seconds = $seconds % 60;
-	}
+    if ($minutes = floor($seconds / 60)) {
+        $r .= $minutes . (isCli() ? ' m ' : ' мин ');
+        $seconds = $seconds % 60;
+    }
 
-	if ($minutes < 3) $r .= ' ' . $seconds + ($ms > 0 ? round($ms) : 0) . (isCli() ? ' s' : ' сек'); 
+    if ($minutes < 3) $r .= ' ' . ($seconds + ($ms > 0 ? round($ms) : 0)) . (isCli() ? ' s' : ' сек');
 
-	return $r;
+    return $r;
 }
 
-if (isCli())
-{
+if (isCli()) {
+    $cli_options = array(
+        'm:' => 'memory:',
+        's:' => 'size:',
+        'a' => 'all',
+        'd:' => 'delay:',
+        'l:' => 'list:',
+        'r:' => 'report:',
+        'f' => 'fast',
+        'j:' => 'file:',
+        'p:' => 'path:',
+        'q' => 'quite',
+        'e:' => 'cms:',
+        'x:' => 'mode:',
+        'k:' => 'skip:',
+        'i:' => 'idb:',
+        'n' => 'sc',
+        'h' => 'help'
+    );
 
-	$cli_options = array(
-		'm:' => 'memory:',
-		's:' => 'size:',
-		'a' => 'all',
-		'd:' => 'delay:',
-		'l:' => 'list:',
-		'r:' => 'report:',
-		'f' => 'fast',
-		'j:' => 'file:',
-		'p:' => 'path:',
-		'q' => 'quite',
-		'e:' => 'cms:',
-		'x:' => 'mode:',
-		'k:' => 'skip:',
-		'i:' => 'idb:',
-		'n' => 'sc',
-		'h' => 'help'
-	);
+    $cli_longopts = array(
+        'cmd:',
+        'noprefix:',
+        'addprefix:',
+        'scan:',
+        'one-pass',
+        'quarantine',
+        'with-2check',
+        'skip-cache',
+        'imake',
+        'icheck',
+        'lang'
+    );
+    $cli_longopts = array_merge($cli_longopts, array_values($cli_options));
 
-	$cli_longopts = array(
-		'cmd:',
-		'noprefix:',
-		'addprefix:',
-		'scan:',
-		'one-pass',
-		'quarantine',
-		'with-2check',
-		'skip-cache',
-		'imake',
-		'icheck',
-		'lang'
-	);
-	$cli_longopts = array_merge($cli_longopts, array_values($cli_options));
+    $options = getopt(implode('', array_keys($cli_options)), $cli_longopts);
 
-	$options = getopt(implode('', array_keys($cli_options)), $cli_longopts);
-
-	if (isset($options['h']) OR isset($options['help']))
-	{
-		$memory_limit = ini_get('memory_limit');
-		echo <<<HELP
+    if (isset($options['h']) or isset($options['help'])) {
+        $memory_limit = ini_get('memory_limit');
+        echo <<<HELP
 AI-Bolit - Script to search for shells and other malicious software.
 
 Usage: php {$_SERVER['PHP_SELF']} [OPTIONS] [PATH]
@@ -1601,117 +1085,110 @@ Current default path is: {$defaults['path']}
 * Mandatory arguments listed below are required for both full and short way of usage.
 
 HELP;
-		exit;
-	}
+        exit;
+    }
 
-	$l_FastCli = false;
-	if (isset($options['lang'])) {
-	    if ($lang == 'RU') {
-	        define('LANG', 'RU');
-	    }
-	    else {
-	        define('LANG', 'EN');
-	    }
-	}
-	else {
+    $l_FastCli = false;
+    if (isset($options['lang'])) {
+        $lang = $options['lang'];
+        if ($lang == 'RU') {
+            define('LANG', 'RU');
+        } else {
+            define('LANG', 'EN');
+        }
+    } else {
         define('LANG', 'EN');
-	}
-	echo LANG;
-	if (
-		(isset($options['memory']) AND !empty($options['memory']) AND ($memory = $options['memory']))
-		OR (isset($options['m']) AND !empty($options['m']) AND ($memory = $options['m']))
-	)
-	{
-		$memory = getBytes($memory);
-		if ($memory > 0)
-		{
-			$defaults['memory_limit'] = $memory;
-			ini_set('memory_limit', $memory);
-		}
-	}
+    }
+    echo LANG;
+    if (
+        (isset($options['memory']) and !empty($options['memory']) and ($memory = $options['memory']))
+        or (isset($options['m']) and !empty($options['m']) and ($memory = $options['m']))
+    ) {
+        try {
+            $memory = getBytes($memory);
+        } catch (Exception $e) {
+            echo '';
+        }
+        if ($memory > 0) {
+            $defaults['memory_limit'] = $memory;
+            ini_set('memory_limit', $memory);
+        }
+    }
 
-	if (
-		(isset($options['file']) AND !empty($options['file']) AND ($file = $options['file']) !== false)
-		OR (isset($options['j']) AND !empty($options['j']) AND ($file = $options['j']) !== false)
-	)
-	{
-		define('SCAN_FILE', $file);
-	}
+    if (
+        (isset($options['file']) and !empty($options['file']) and ($file = $options['file']) !== false)
+        or (isset($options['j']) and !empty($options['j']) and ($file = $options['j']) !== false)
+    ) {
+        define('SCAN_FILE', $file);
+    }
 
 
-	if (
-		(isset($options['list']) AND !empty($options['list']) AND ($file = $options['list']) !== false)
-		OR (isset($options['l']) AND !empty($options['l']) AND ($file = $options['l']) !== false)
-	)
-	{
+    if (
+        (isset($options['list']) and !empty($options['list']) and ($file = $options['list']) !== false)
+        or (isset($options['l']) and !empty($options['l']) and ($file = $options['l']) !== false)
+    ) {
 
-		define('PLAIN_FILE', $file);
-	}
-	if (
-		(isset($options['size']) AND !empty($options['size']) AND ($size = $options['size']) !== false)
-		OR (isset($options['s']) AND !empty($options['s']) AND ($size = $options['s']) !== false)
-	)
-	{
-		$size = getBytes($size);
-		$defaults['max_size_to_scan'] = $size > 0 ? $size : 0;
-	}
+        define('PLAIN_FILE', $file);
+    }
+    if (
+        (isset($options['size']) and !empty($options['size']) and ($size = $options['size']) !== false)
+        or (isset($options['s']) and !empty($options['s']) and ($size = $options['s']) !== false)
+    ) {
+        try {
+            $size = getBytes($size);
+        } catch (Exception $e) {
+            echo '';
+        }
+        $defaults['max_size_to_scan'] = $size > 0 ? $size : 0;
+    }
 
- 	if (
- 		(isset($options['file']) AND !empty($options['file']) AND ($file = $options['file']) !== false)
- 		OR (isset($options['j']) AND !empty($options['j']) AND ($file = $options['j']) !== false)
- 		AND (isset($options['q'])) 
- 	
- 	)
- 	{
- 		$BOOL_RESULT = true;
- 	}
- 
-	if (isset($options['f'])) 
-	 {
-	   $l_FastCli = true;
-	 }
-		
-	if (
-		(isset($options['delay']) AND !empty($options['delay']) AND ($delay = $options['delay']) !== false)
-		OR (isset($options['d']) AND !empty($options['d']) AND ($delay = $options['d']) !== false)
-	)
-	{
-		$delay = (int) $delay;
-		if (!($delay < 0))
-		{
-			$defaults['scan_delay'] = $delay;
-		}
-	}
+    if (
+        (isset($options['file']) and !empty($options['file']) and ($file = $options['file']) !== false)
+        or (isset($options['j']) and !empty($options['j']) and ($file = $options['j']) !== false)
+        and (isset($options['q']))
 
-	if (
-		(isset($options['skip']) AND !empty($options['skip']) AND ($ext_list = $options['skip']) !== false)
-		OR (isset($options['k']) AND !empty($options['k']) AND ($ext_list = $options['k']) !== false)
-	)
-	{
-		$defaults['skip_ext'] = $ext_list;
-	}
+    ) {
+        $BOOL_RESULT = true;
+    }
 
-	if (isset($options['n']) OR isset($options['skip-cache']))
-	{
-		$defaults['skip_cache'] = true;
-	}
+    if (isset($options['f'])) {
+        $l_FastCli = true;
+    }
 
-	if (isset($options['all']) OR isset($options['a']))
-	{
-		$defaults['scan_all_files'] = 1;
-	}
+    if (
+        (isset($options['delay']) and !empty($options['delay']) and ($delay = $options['delay']) !== false)
+        or (isset($options['d']) and !empty($options['d']) and ($delay = $options['d']) !== false)
+    ) {
+        $delay = (int)$delay;
+        if (!($delay < 0)) {
+            $defaults['scan_delay'] = $delay;
+        }
+    }
 
-	if (isset($options['scan']))
-	{
-		$ext_list = strtolower(trim($options['scan'], " ,\t\n\r\0\x0B"));
-		if ($ext_list != '')
-		{
-			$l_FastCli = true;
-			$g_SensitiveFiles = explode(",", $ext_list);
-			stdOut("Scan extensions: " . $ext_list);
-			$g_SpecificExt = true;
-		}
-	}
+    if (
+        (isset($options['skip']) and !empty($options['skip']) and ($ext_list = $options['skip']) !== false)
+        or (isset($options['k']) and !empty($options['k']) and ($ext_list = $options['k']) !== false)
+    ) {
+        $defaults['skip_ext'] = $ext_list;
+    }
+
+    if (isset($options['n']) or isset($options['skip-cache'])) {
+        $defaults['skip_cache'] = true;
+    }
+
+    if (isset($options['all']) or isset($options['a'])) {
+        $defaults['scan_all_files'] = 1;
+    }
+
+    if (isset($options['scan'])) {
+        $ext_list = strtolower(trim($options['scan'], " ,\t\n\r\0\x0B"));
+        if ($ext_list != '') {
+            $l_FastCli = true;
+            $g_SensitiveFiles = explode(",", $ext_list);
+            stdOut("Scan extensions: " . $ext_list);
+            $g_SpecificExt = true;
+        }
+    }
 
 
     if (isset($options['cms'])) {
@@ -1725,727 +1202,679 @@ HELP;
     } else if (isset($options['mode'])) {
         define('AI_EXPERT', $options['mode']);
     } else {
-		define('AI_EXPERT', AI_EXPERT_MODE); 
+        define('AI_EXPERT', AI_EXPERT_MODE);
     }
 
-	$l_SpecifiedPath = false;
-	if (
-		(isset($options['path']) AND !empty($options['path']) AND ($path = $options['path']) !== false)
-		OR (isset($options['p']) AND !empty($options['p']) AND ($path = $options['p']) !== false)
-	)
-	{
-		$defaults['path'] = $path;
-		$l_SpecifiedPath = true;
-	}
+    $l_SpecifiedPath = false;
+    if (
+        (isset($options['path']) and !empty($options['path']) and ($path = $options['path']) !== false)
+        or (isset($options['p']) and !empty($options['p']) and ($path = $options['p']) !== false)
+    ) {
+        $defaults['path'] = $path;
+        $l_SpecifiedPath = true;
+    }
 
-	if (
-		isset($options['noprefix']) AND !empty($options['noprefix']) AND ($g_NoPrefix = $options['noprefix']) !== false)
-		
-	{
-	} else {
-		$g_NoPrefix = '';
-	}
+    if (isset($options['noprefix']) and !empty($options['noprefix']) and ($g_NoPrefix = $options['noprefix']) !== false) {
+        echo '';
+    } else {
+        $g_NoPrefix = '';
+    }
 
-	if (
-		isset($options['addprefix']) AND !empty($options['addprefix']) AND ($g_AddPrefix = $options['addprefix']) !== false)
-		
-	{
-	} else {
-		$g_AddPrefix = '';
-	}
+    if (
+        isset($options['addprefix']) and !empty($options['addprefix']) and ($g_AddPrefix = $options['addprefix']) !== false) {
+        echo '';
+    } else {
+        $g_AddPrefix = '';
+    }
 
 
-
-	$l_SuffixReport = str_replace('/var/www', '', $defaults['path']);
-	$l_SuffixReport = str_replace('/home', '', $l_SuffixReport);
+    $l_SuffixReport = str_replace('/var/www', '', $defaults['path']);
+    $l_SuffixReport = str_replace('/home', '', $l_SuffixReport);
     $l_SuffixReport = preg_replace('#[/\\\.\s]#', '_', $l_SuffixReport);
-	$l_SuffixReport .=  "-" . rand(1, 999999);
-		
-	if (
-		(isset($options['report']) AND ($report = $options['report']) !== false)
-		OR (isset($options['r']) AND ($report = $options['r']) !== false)
-	)
-	{
-		$report = str_replace('@PATH@', $l_SuffixReport, $report);
-		$report = str_replace('@RND@', rand(1, 999999), $report);
-		$report = str_replace('@DATE@', date('d-m-Y-h-i'), $report);
-		define('REPORT', $report);
-	}
+    $l_SuffixReport .= "-" . rand(1, 999999);
+    global $report;
+    if (
+        (isset($options['report']) and ($report = $options['report']) !== false)
+        or (isset($options['r']) and ($report = $options['r']) !== false)
+    ) {
+        $report = str_replace('@PATH@', $l_SuffixReport, $report);
+        $report = str_replace('@RND@', rand(1, 999999), $report);
+        $report = str_replace('@DATE@', date('d-m-Y-h-i'), $report);
+        define('REPORT', $report);
+    }
 
-	if (
-		(isset($options['idb']) AND ($ireport = $options['idb']) !== false)
-	)
-	{
-		$ireport = str_replace('@PATH@', $l_SuffixReport, $ireport);
-		$ireport = str_replace('@RND@', rand(1, 999999), $ireport);
-		$ireport = str_replace('@DATE@', date('d-m-Y-h-i'), $ireport);
-		define('INTEGRITY_DB_FILE', $ireport);
-	}
+    if (
+        (isset($options['idb']) and ($ireport = $options['idb']) !== false)
+    ) {
+        $ireport = str_replace('@PATH@', $l_SuffixReport, $ireport);
+        $ireport = str_replace('@RND@', rand(1, 999999), $ireport);
+        $ireport = str_replace('@DATE@', date('d-m-Y-h-i'), $ireport);
+        define('INTEGRITY_DB_FILE', $ireport);
+    }
 
-  
+
     $l_ReportDirName = dirname($report);
-	define('QUEUE_FILENAME', ($l_ReportDirName != '' ? $l_ReportDirName . '/' : '') . 'AI-BOLIT-QUEUE-' . md5($defaults['path']) . '.txt');
+    define('QUEUE_FILENAME', ($l_ReportDirName != '' ? $l_ReportDirName . '/' : '') . 'AI-BOLIT-QUEUE-' . md5($defaults['path']) . '.txt');
 
-	defined('REPORT') OR define('REPORT', 'AI-BOLIT-REPORT-' . $l_SuffixReport . '-' . date('d-m-Y_H-i') . '.html');
-	
-	defined('INTEGRITY_DB_FILE') OR define('INTEGRITY_DB_FILE', 'AINTEGRITY-' . $l_SuffixReport . '-' . date('d-m-Y_H-i'));
+    defined('REPORT') or define('REPORT', 'AI-BOLIT-REPORT-' . $l_SuffixReport . '-' . date('d-m-Y_H-i') . '.html');
 
-	$last_arg = max(1, sizeof($_SERVER['argv']) - 1);
-	if (isset($_SERVER['argv'][$last_arg]))
-	{
-		$path = $_SERVER['argv'][$last_arg];
-		if (
-			substr($path, 0, 1) != '-'
-			AND (substr($_SERVER['argv'][$last_arg - 1], 0, 1) != '-' OR array_key_exists(substr($_SERVER['argv'][$last_arg - 1], -1), $cli_options)))
-		{
-			$defaults['path'] = $path;
-		}
-	}	
-	
-	
-	define('ONE_PASS', isset($options['one-pass']));
+    defined('INTEGRITY_DB_FILE') or define('INTEGRITY_DB_FILE', 'AINTEGRITY-' . $l_SuffixReport . '-' . date('d-m-Y_H-i'));
 
-	define('IMAKE', isset($options['imake']));
-	define('ICHECK', isset($options['icheck']));
+    $last_arg = max(1, sizeof($_SERVER['argv']) - 1);
+    if (isset($_SERVER['argv'][$last_arg])) {
+        $path = $_SERVER['argv'][$last_arg];
+        if (
+            substr($path, 0, 1) != '-'
+            and (substr($_SERVER['argv'][$last_arg - 1], 0, 1) != '-' or array_key_exists(substr($_SERVER['argv'][$last_arg - 1], -1), $cli_options))) {
+            $defaults['path'] = $path;
+        }
+    }
 
-	if (IMAKE && ICHECK) die('One of the following options must be used --imake or --icheck.');
+
+    define('ONE_PASS', isset($options['one-pass']));
+
+    define('IMAKE', isset($options['imake']));
+    define('ICHECK', isset($options['icheck']));
+
+    if (IMAKE && ICHECK) die('One of the following options must be used --imake or --icheck.');
 
 } else {
-   define('AI_EXPERT', AI_EXPERT_MODE); 
-   define('ONE_PASS', true);
+    define('AI_EXPERT', AI_EXPERT_MODE);
+    define('ONE_PASS', true);
 }
 
 OptimizeSignatures();
 
-$g_DBShe  = array_map('strtolower', $g_DBShe);
+$g_DBShe = array_map('strtolower', $g_DBShe);
 $gX_DBShe = array_map('strtolower', $gX_DBShe);
 
-if (!defined('PLAIN_FILE')) { define('PLAIN_FILE', ''); }
+if (!defined('PLAIN_FILE')) {
+    define('PLAIN_FILE', '');
+}
 
 // Init
-define('MAX_ALLOWED_PHP_HTML_IN_DIR', 600);
-define('BASE64_LENGTH', 69);
-define('MAX_PREVIEW_LEN', 80);
-define('MAX_EXT_LINKS', 1001);
+const MAX_ALLOWED_PHP_HTML_IN_DIR = 600;
+//const BASE64_LENGTH = 69;
+const MAX_PREVIEW_LEN = 80;
+const MAX_EXT_LINKS = 1001;
 
 // Perform full scan when running from command line
 if (isCli() || isset($_GET['full'])) {
-  $defaults['scan_all_files'] = 1;
+    $defaults['scan_all_files'] = 1;
 }
 
 if ($l_FastCli) {
-  $defaults['scan_all_files'] = 0; 
+    $defaults['scan_all_files'] = 0;
 }
 
 if (!isCli()) {
-  	define('ICHECK', isset($_GET['icheck']));
-  	define('IMAKE', isset($_GET['imake']));
-	
-	define('INTEGRITY_DB_FILE', 'ai-integrity-db');
+    define('ICHECK', isset($_GET['icheck']));
+    define('IMAKE', isset($_GET['imake']));
+
+    define('INTEGRITY_DB_FILE', 'ai-integrity-db');
 }
 
-define('SCAN_ALL_FILES', (bool) $defaults['scan_all_files']);
-define('SCAN_DELAY', (int) $defaults['scan_delay']);
-define('MAX_SIZE_TO_SCAN', getBytes($defaults['max_size_to_scan']));
+define('SCAN_ALL_FILES', (bool)$defaults['scan_all_files']);
+define('SCAN_DELAY', (int)$defaults['scan_delay']);
+try {
+    define('MAX_SIZE_TO_SCAN', getBytes($defaults['max_size_to_scan']));
+} catch (Exception $e) {
+    echo '';
+}
 
-if ($defaults['memory_limit'] AND ($defaults['memory_limit'] = getBytes($defaults['memory_limit'])) > 0) {
-	ini_set('memory_limit', $defaults['memory_limit']);
-    stdOut("Changed memory limit to " . $defaults['memory_limit']);
+try {
+    if ($defaults['memory_limit'] and ($defaults['memory_limit'] = getBytes($defaults['memory_limit'])) > 0) {
+        ini_set('memory_limit', $defaults['memory_limit']);
+        stdOut("Changed memory limit to " . $defaults['memory_limit']);
+    }
+} catch (Exception $e) {
+    echo '';
 }
 
 define('START_TIME', microtime(true));
 
 define('ROOT_PATH', realpath($defaults['path']));
 
-if (!ROOT_PATH)
-{
-    if (isCli())  {
-		die(stdOut("Directory '{$defaults['path']}' not found!"));
-	}
-}
-elseif(!is_readable(ROOT_PATH))
-{
-        if (isCli())  {
-		die(stdOut("Cannot read directory '" . ROOT_PATH . "'!"));
-	}
+if (!ROOT_PATH) {
+    if (isCli()) {
+        die(stdOut("Directory '{$defaults['path']}' not found!"));
+    }
+} elseif (!is_readable(ROOT_PATH)) {
+    if (isCli()) {
+        die(stdOut("Cannot read directory '" . ROOT_PATH . "'!"));
+    }
 }
 
 define('CURRENT_DIR', getcwd());
 chdir(ROOT_PATH);
 
 // Проверяем отчет
-if (isCli() AND REPORT !== '' AND !getEmails(REPORT))
-{
-	$report = str_replace('\\', '/', REPORT);
-	$abs = strpos($report, '/') === 0 ? DIR_SEPARATOR : '';
-	$report = array_values(array_filter(explode('/', $report)));
-	$report_file = array_pop($report);
-	$report_path = realpath($abs . implode(DIR_SEPARATOR, $report));
+if (isCli() and REPORT !== '' and !getEmails(REPORT)) {
+    $report = str_replace('\\', '/', REPORT);
+    $abs = strpos($report, '/') === 0 ? DIR_SEPARATOR : '';
+    $report = array_values(array_filter(explode('/', $report)));
+    $report_file = array_pop($report);
+    $report_path = realpath($abs . implode(DIR_SEPARATOR, $report));
 
-	define('REPORT_FILE', $report_file);
-	define('REPORT_PATH', $report_path);
+    define('REPORT_FILE', $report_file);
+    define('REPORT_PATH', $report_path);
 
-	if (REPORT_FILE AND REPORT_PATH AND is_file(REPORT_PATH . DIR_SEPARATOR . REPORT_FILE))
-	{
-		@unlink(REPORT_PATH . DIR_SEPARATOR . REPORT_FILE);
-	}
+    if (REPORT_FILE and REPORT_PATH and is_file(REPORT_PATH . DIR_SEPARATOR . REPORT_FILE)) {
+        @unlink(REPORT_PATH . DIR_SEPARATOR . REPORT_FILE);
+    }
 }
 
 
 if (function_exists('phpinfo')) {
-   ob_start();
-   phpinfo();
-   $l_PhpInfo = ob_get_contents();
-   ob_end_clean();
+    ob_start();
+    phpinfo();
+    $l_PhpInfo = ob_get_contents();
+    ob_end_clean();
 
-   $l_PhpInfo = str_replace('border: 1px', '', $l_PhpInfo);
-   preg_match('|<body>(.*)</body>|smi', $l_PhpInfo, $l_PhpInfoBody);
+    $l_PhpInfo = str_replace('border: 1px', '', $l_PhpInfo);
+    preg_match('|<body>(.*)</body>|smi', $l_PhpInfo, $l_PhpInfoBody);
 }
 
-////////////////////////////////////////////////////////////////////////////
 $l_Template = str_replace("@@MODE@@", AI_EXPERT . '/' . SMART_SCAN, $l_Template);
-
+$l_Result = '';
 if (AI_EXPERT == 0) {
-   $l_Result .= '<div class="rep">' . AI_STR_057 . '</div>'; 
-} else {
+    $l_Result .= '<div class="rep">' . AI_STR_057 . '</div>';
 }
 
 $l_Template = str_replace('@@HEAD_TITLE@@', AI_STR_051 . $g_AddPrefix . str_replace($g_NoPrefix, '', ROOT_PATH), $l_Template);
 
-define('QCR_INDEX_FILENAME', 'fn');
-define('QCR_INDEX_TYPE', 'type');
-define('QCR_INDEX_WRITABLE', 'wr');
-define('QCR_SVALUE_FILE', '1');
-define('QCR_SVALUE_FOLDER', '0');
+//const QCR_INDEX_FILENAME = 'fn';
+//const QCR_INDEX_TYPE = 'type';
+//const QCR_INDEX_WRITABLE = 'wr';
+//const QCR_SVALUE_FILE = '1';
+//const QCR_SVALUE_FOLDER = '0';
 
 /**
  * Extract emails from the string
  * @param string $email
- * @return array of strings with emails or false on error
+ * @return array|false
  */
-function getEmails($email)
-{
-	$email = preg_split('#[,\s;]#', $email, -1, PREG_SPLIT_NO_EMPTY);
-	$r = array();
-	for ($i = 0, $size = sizeof($email); $i < $size; $i++)
-	{
-	        if (function_exists('filter_var')) {
-   		   if (filter_var($email[$i], FILTER_VALIDATE_EMAIL))
-   		   {
-   		   	$r[] = $email[$i];
-    		   }
-                } else {
-                   // for PHP4
-                   if (strpos($email[$i], '@') !== false) {
-   		   	$r[] = $email[$i];
-                   }
-                }
-	}
-	return empty($r) ? false : $r;
+function getEmails(string $email) {
+    $email = preg_split('#[,\s;]#', $email, -1, PREG_SPLIT_NO_EMPTY);
+    $r = array();
+    for ($i = 0, $size = sizeof($email); $i < $size; $i++) {
+        if (function_exists('filter_var')) {
+            if (filter_var($email[$i], FILTER_VALIDATE_EMAIL)) {
+                $r[] = $email[$i];
+            }
+        } else {
+            // for PHP4
+            if (strpos($email[$i], '@') !== false) {
+                $r[] = $email[$i];
+            }
+        }
+    }
+    return empty($r) ? false : $r;
 }
 
 /**
  * Get bytes from shorthand byte values (1M, 1G...)
  * @param int|string $val
  * @return int
+ * @throws Exception
  */
-function getBytes($val)
-{
-	$val = trim($val);
-	$last = strtolower($val{strlen($val) - 1});
-	switch($last) {
-		case 't':
-			$val *= 1024;
-		case 'g':
-			$val *= 1024;
-		case 'm':
-			$val *= 1024;
-		case 'k':
-			$val *= 1024;
-	}
-	return intval($val);
+function getBytes($val): int {
+    $val = trim($val);
+    $last = strtolower($val{strlen($val) - 1});
+    switch ($last) {
+        case 'g':
+        case 'm':
+        case 'k':
+        case 't':
+            $val *= 1024;
+            break;
+    }
+    return intval($val);
 }
 
 /**
- * Format bytes to human readable
+ * Format bytes to normal text
  * @param int $bites
  * @return string
  */
-function bytes2Human($bites)
-{
-	if ($bites < 1024)
-	{
-		return $bites . ' b';
-	}
-	elseif (($kb = $bites / 1024) < 1024)
-	{
-		return number_format($kb, 2) . ' Kb';
-	}
-	elseif (($mb = $kb / 1024) < 1024)
-	{
-		return number_format($mb, 2) . ' Mb';
-	}
-	elseif (($gb = $mb / 1024) < 1024)
-	{
-		return number_format($gb, 2) . ' Gb';
-	}
-	else
-	{
-		return number_format($gb / 1024, 2) . 'Tb';
-	}
+function normalize_bytes(int $bites): string {
+    if ($bites < 1024) {
+        return $bites . ' b';
+    } elseif (($kb = $bites / 1024) < 1024) {
+        return number_format($kb, 2) . ' Kb';
+    } elseif (($mb = $kb / 1024) < 1024) {
+        return number_format($mb, 2) . ' Mb';
+    } elseif (($gb = $mb / 1024) < 1024) {
+        return number_format($gb, 2) . ' Gb';
+    } else {
+        return number_format($gb / 1024, 2) . 'Tb';
+    }
 }
 
-///////////////////////////////////////////////////////////////////////////
-function needIgnore($par_FN, $par_CRC) {
-  global $g_IgnoreList;
-  
-  for ($i = 0; $i < count($g_IgnoreList); $i++) {
-     if (strpos($par_FN, $g_IgnoreList[$i][0]) !== false) {
-		if ($par_CRC == $g_IgnoreList[$i][1]) {
-			return true;
-		}
-	 }
-  }
-  
-  return false;
+function needIgnore($par_FN, $par_CRC): bool {
+    global $g_IgnoreList;
+
+    for ($i = 0; $i < count($g_IgnoreList); $i++) {
+        if (strpos($par_FN, $g_IgnoreList[$i][0]) !== false) {
+            if ($par_CRC == $g_IgnoreList[$i][1]) {
+                return true;
+            }
+        }
+    }
+
+    return false;
 }
 
-///////////////////////////////////////////////////////////////////////////
-function makeSafeFn($par_Str, $replace_path = false) {
-  global $g_AddPrefix, $g_NoPrefix;
-  if ($replace_path) {
-     $lines = explode("\n", $par_Str);
-     array_walk($lines, function(&$n) {
-          global $g_AddPrefix, $g_NoPrefix;
-          $n = $g_AddPrefix . str_replace($g_NoPrefix, '', $n); 
-     }); 
+function makeSafeFn($par_Str, $replace_path = false): string {
+    if ($replace_path) {
+        $lines = explode("\n", $par_Str);
+        array_walk($lines, function (&$n) {
+            global $g_AddPrefix, $g_NoPrefix;
+            $n = $g_AddPrefix . str_replace($g_NoPrefix, '', $n);
+        });
 
-     $par_Str = implode("\n", $lines);
-  }
- 
-  return htmlspecialchars($par_Str, ENT_SUBSTITUTE | ENT_QUOTES);
+        $par_Str = implode("\n", $lines);
+    }
+
+    return htmlspecialchars($par_Str, ENT_SUBSTITUTE | ENT_QUOTES);
 }
 
 function replacePathArray($par_Arr) {
-  global $g_AddPrefix, $g_NoPrefix;
-     array_walk($par_Arr, function(&$n) {
-          global $g_AddPrefix, $g_NoPrefix;
-          $n = $g_AddPrefix . str_replace($g_NoPrefix, '', $n); 
-     }); 
+    array_walk($par_Arr, function (&$n) {
+        global $g_AddPrefix, $g_NoPrefix;
+        $n = $g_AddPrefix . str_replace($g_NoPrefix, '', $n);
+    });
 
-  return $par_Arr;
+    return $par_Arr;
 }
 
-///////////////////////////////////////////////////////////////////////////
-function printList($par_List, $par_Details = null, $par_NeedIgnore = false, $par_SigId = null, $par_TableName = null) {
-  global $g_Structure, $g_NoPrefix, $g_AddPrefix;
-  
-  if ($par_TableName == null) {
-     $par_TableName = 'table_' . rand(1000000,9000000);
-  }
+function printList($par_List, $par_Details = null, $par_NeedIgnore = false, $par_SigId = null, $par_TableName = null): string {
+    global $g_Structure, $g_NoPrefix, $g_AddPrefix;
 
-  $l_Result = '';
-  $l_Result .= "<div class=\"flist\"><table cellspacing=1 cellpadding=4 border=0 id=\"" . $par_TableName . "\">";
-
-  $l_Result .= "<thead><tr class=\"tbgh" . ( $i % 2 ). "\">";
-  $l_Result .= "<th width=70%>" . AI_STR_004 . "</th>";
-  $l_Result .= "<th>" . AI_STR_005 . "</th>";
-  $l_Result .= "<th>" . AI_STR_006 . "</th>";
-  $l_Result .= "<th width=90>" . AI_STR_007 . "</th>";
-  $l_Result .= "<th width=0 class=\"hidd\">CRC32</th>";
-  $l_Result .= "<th width=0 class=\"hidd\"></th>";
-  $l_Result .= "<th width=0 class=\"hidd\"></th>";
-  $l_Result .= "<th width=0 class=\"hidd\"></th>";
-  
-  $l_Result .= "</tr></thead><tbody>";
-
-  for ($i = 0; $i < count($par_List); $i++) {
-    if ($par_SigId != null) {
-       $l_SigId = 'id_' . $par_SigId[$i];
-    } else {
-       $l_SigId = 'id_z' . rand(1000000,9000000);
+    if ($par_TableName == null) {
+        $par_TableName = 'table_' . rand(1000000, 9000000);
     }
-    
-    $l_Pos = $par_List[$i];
-        if ($par_NeedIgnore) {
-         	if (needIgnore($g_Structure['n'][$par_List[$i]], $g_Structure['crc'][$l_Pos])) {
-         		continue;
-         	}
-        }
-  
-     $l_Creat = $g_Structure['c'][$l_Pos] > 0 ? date("d/m/Y H:i:s", $g_Structure['c'][$l_Pos]) : '-';
-     $l_Modif = $g_Structure['m'][$l_Pos] > 0 ? date("d/m/Y H:i:s", $g_Structure['m'][$l_Pos]) : '-';
-     $l_Size = $g_Structure['s'][$l_Pos] > 0 ? bytes2Human($g_Structure['s'][$l_Pos]) : '-';
+    $l_Result = "<div class=\"flist\"><table cellspacing=1 cellpadding=4 border=0 id=\"" . $par_TableName . "\">";
+//    $l_Result .= "<thead><tr class=\"tbgh" . ($i % 2) . "\">";
+    $l_Result .= "<thead><tr class=\"tbgh\">";
+    $l_Result .= "<th width=70%>" . AI_STR_004 . "</th>";
+    $l_Result .= "<th>" . AI_STR_005 . "</th>";
+    $l_Result .= "<th>" . AI_STR_006 . "</th>";
+    $l_Result .= "<th width=90>" . AI_STR_007 . "</th>";
+    $l_Result .= "<th width=0 class=\"hidd\">CRC32</th>";
+    $l_Result .= "<th width=0 class=\"hidd\"></th>";
+    $l_Result .= "<th width=0 class=\"hidd\"></th>";
+    $l_Result .= "<th width=0 class=\"hidd\"></th>";
+    $l_Result .= "</tr></thead><tbody>";
 
-     if ($par_Details != null) {
-        $l_WithMarker = preg_replace('|__AI_MARKER__|smi', '<span class="marker">&nbsp;</span>', $par_Details[$i]);
-        $l_WithMarker = preg_replace('|__AI_LINE1__|smi', '<span class="line_no">', $l_WithMarker);
-        $l_WithMarker = preg_replace('|__AI_LINE2__|smi', '</span>', $l_WithMarker);
-		
-        $l_Body = '<div class="details">';
-
+    for ($i = 0; $i < count($par_List); $i++) {
         if ($par_SigId != null) {
-           $l_Body .= '<a href="#" onclick="return hsig(\'' . $l_SigId . '\')">[x]</a> ';
+            $l_SigId = 'id_' . $par_SigId[$i];
+        } else {
+            $l_SigId = 'id_z' . rand(1000000, 9000000);
         }
 
-        $l_Body .= $l_WithMarker . '</div>';
-     } else {
-        $l_Body = '';
-     }
-
-     $l_Result .= '<tr class="tbg' . ( $i % 2 ). '" o="' . $l_SigId .'">';
-	 
-	 if (is_file($g_Structure['n'][$l_Pos])) {
-//		$l_Result .= '<td><div class="it"><a class="it" target="_blank" href="'. $defaults['site_url'] . 'ai-bolit.php?fn=' .
-//	              $g_Structure['n'][$l_Pos] . '&ph=' . realCRC(PASS) . '&c=' . $g_Structure['crc'][$l_Pos] . '">' . $g_Structure['n'][$l_Pos] . '</a></div>' . $l_Body . '</td>';
-		$l_Result .= '<td><div class="it"><a class="it">' . makeSafeFn($g_AddPrefix . str_replace($g_NoPrefix, '', $g_Structure['n'][$l_Pos])) . '</a></div>' . $l_Body . '</td>';
-	 } else {
-		$l_Result .= '<td><div class="it"><a class="it">' . makeSafeFn($g_AddPrefix . str_replace($g_NoPrefix, '', $g_Structure['n'][$par_List[$i]])) . '</a></div></td>';
-	 }
-	 
-     $l_Result .= '<td align=center><div class="ctd">' . $l_Creat . '</div></td>';
-     $l_Result .= '<td align=center><div class="ctd">' . $l_Modif . '</div></td>';
-     $l_Result .= '<td align=center><div class="ctd">' . $l_Size . '</div></td>';
-     $l_Result .= '<td class="hidd"><div class="hidd">' . $g_Structure['crc'][$l_Pos] . '</div></td>';
-     $l_Result .= '<td class="hidd"><div class="hidd">' . $g_Structure['c'][$l_Pos] . '</div></td>';
-     $l_Result .= '<td class="hidd"><div class="hidd">' . $g_Structure['m'][$l_Pos] . '</div></td>';
-     $l_Result .= '<td class="hidd"><div class="hidd">' . $l_SigId . '</div></td>';
-     $l_Result .= '</tr>';
-
-  }
-
-  $l_Result .= "</tbody></table></div><div class=clear style=\"margin: 20px 0 0 0\"></div>";
-
-  return $l_Result;
-}
-
-///////////////////////////////////////////////////////////////////////////
-function printPlainList($par_List, $par_Details = null, $par_NeedIgnore = false, $par_SigId = null, $par_TableName = null) {
-  global $g_Structure, $g_NoPrefix, $g_AddPrefix;
-  
-//  $l_Result = "\n#\n";
-
-  $l_Src = array('&quot;', '&lt;', '&gt;', '&amp;', '&#039;');
-  $l_Dst = array('"',      '<',    '>',    '&', '\'');
-
-  for ($i = 0; $i < count($par_List); $i++) {
-    $l_Pos = $par_List[$i];
+        $l_Pos = $par_List[$i];
         if ($par_NeedIgnore) {
-         	if (needIgnore($g_Structure['n'][$par_List[$i]], $g_Structure['crc'][$l_Pos])) {
-         		continue;
-         	}                      
-        }
-  
-
-     if ($par_Details != null) {
-        $l_Body = preg_replace('|(L\d+).+__AI_MARKER__|smi', '$1: ...', $par_Details[$i]);
-        $l_Body = preg_replace('/[^\x21-\x7F]/', '.', $l_Body);
-        $l_Body = str_replace($l_Src, $l_Dst, $l_Body);
-
-     } else {
-        $l_Body = '';
-     }
-
-	 if (is_file($g_Structure['n'][$l_Pos])) {		 
-		$l_Result .= $g_AddPrefix . str_replace($g_NoPrefix, '', $g_Structure['n'][$l_Pos]) . "\t\t\t" . $l_Body . "\n";
-	 } else {
-		$l_Result .= $g_AddPrefix . str_replace($g_NoPrefix, '', $g_Structure['n'][$par_List[$i]]) . "\n";
-	 }
-	 
-  }
-
-  return $l_Result;
-}
-
-///////////////////////////////////////////////////////////////////////////
-function extractValue(&$par_Str, $par_Name) {
-  if (preg_match('|<tr><td class="e">\s*'.$par_Name.'\s*</td><td class="v">(.+?)</td>|sm', $par_Str, $l_Result)) {
-     return str_replace('no value', '', strip_tags($l_Result[1]));
-  }
-}
-
-///////////////////////////////////////////////////////////////////////////
-function QCR_ExtractInfo($par_Str) {
-   $l_PhpInfoSystem = extractValue($par_Str, 'System');
-   $l_PhpPHPAPI = extractValue($par_Str, 'Server API');
-   $l_AllowUrlFOpen = extractValue($par_Str, 'allow_url_fopen');
-   $l_AllowUrlInclude = extractValue($par_Str, 'allow_url_include');
-   $l_DisabledFunction = extractValue($par_Str, 'disable_functions');
-   $l_DisplayErrors = extractValue($par_Str, 'display_errors');
-   $l_ErrorReporting = extractValue($par_Str, 'error_reporting');
-   $l_ExposePHP = extractValue($par_Str, 'expose_php');
-   $l_LogErrors = extractValue($par_Str, 'log_errors');
-   $l_MQGPC = extractValue($par_Str, 'magic_quotes_gpc');
-   $l_MQRT = extractValue($par_Str, 'magic_quotes_runtime');
-   $l_OpenBaseDir = extractValue($par_Str, 'open_basedir');
-   $l_RegisterGlobals = extractValue($par_Str, 'register_globals');
-   $l_SafeMode = extractValue($par_Str, 'safe_mode');
-
-
-   $l_DisabledFunction = ($l_DisabledFunction == '' ? '-?-' : $l_DisabledFunction);
-   $l_OpenBaseDir = ($l_OpenBaseDir == '' ? '-?-' : $l_OpenBaseDir);
-
-   $l_Result = '<div class="title">' . AI_STR_008 . ': ' . phpversion() . '</div>';
-   $l_Result .= 'System Version: <span class="php_ok">' . $l_PhpInfoSystem . '</span><br/>';
-   $l_Result .= 'PHP API: <span class="php_ok">' . $l_PhpPHPAPI. '</span><br/>';
-   $l_Result .= 'allow_url_fopen: <span class="php_' . ($l_AllowUrlFOpen == 'On' ? 'bad' : 'ok') . '">' . $l_AllowUrlFOpen. '</span><br/>';
-   $l_Result .= 'allow_url_include: <span class="php_' . ($l_AllowUrlInclude == 'On' ? 'bad' : 'ok') . '">' . $l_AllowUrlInclude. '</span><br/>';
-   $l_Result .= 'disable_functions: <span class="php_' . ($l_DisabledFunction == '-?-' ? 'bad' : 'ok') . '">' . $l_DisabledFunction. '</span><br/>';
-   $l_Result .= 'display_errors: <span class="php_' . ($l_DisplayErrors == 'On' ? 'ok' : 'bad') . '">' . $l_DisplayErrors. '</span><br/>';
-   $l_Result .= 'error_reporting: <span class="php_ok">' . $l_ErrorReporting. '</span><br/>';
-   $l_Result .= 'expose_php: <span class="php_' . ($l_ExposePHP == 'On' ? 'bad' : 'ok') . '">' . $l_ExposePHP. '</span><br/>';
-   $l_Result .= 'log_errors: <span class="php_' . ($l_LogErrors == 'On' ? 'ok' : 'bad') . '">' . $l_LogErrors . '</span><br/>';
-   $l_Result .= 'magic_quotes_gpc: <span class="php_' . ($l_MQGPC == 'On' ? 'ok' : 'bad') . '">' . $l_MQGPC. '</span><br/>';
-   $l_Result .= 'magic_quotes_runtime: <span class="php_' . ($l_MQRT == 'On' ? 'bad' : 'ok') . '">' . $l_MQRT. '</span><br/>';
-   $l_Result .= 'register_globals: <span class="php_' . ($l_RegisterGlobals == 'On' ? 'bad' : 'ok') . '">' . $l_RegisterGlobals . '</span><br/>';
-   $l_Result .= 'open_basedir: <span class="php_' . ($l_OpenBaseDir == '-?-' ? 'bad' : 'ok') . '">' . $l_OpenBaseDir . '</span><br/>';
-   
-   if (phpversion() < '5.3.0') {
-      $l_Result .= 'safe_mode (PHP < 5.3.0): <span class="php_' . ($l_SafeMode == 'On' ? 'ok' : 'bad') . '">' . $l_SafeMode. '</span><br/>';
-   }
-
-   return $l_Result . '<p>';
-}
-
-///////////////////////////////////////////////////////////////////////////
-   function addSlash($dir) {
-      return rtrim($dir, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
-   }
-
-///////////////////////////////////////////////////////////////////////////
-function QCR_Debug($par_Str = "") {
-  if (!DEBUG_MODE) {
-     return;
-  }
-
-  $l_MemInfo = ' ';  
-  if (function_exists('memory_get_usage')) {
-     $l_MemInfo .= ' curmem=' .  bytes2Human(memory_get_usage());
-  }
-
-  if (function_exists('memory_get_peak_usage')) {
-     $l_MemInfo .= ' maxmem=' .  bytes2Human(memory_get_peak_usage());
-  }
-
-  stdOut("\n" . date('H:i:s') . ': ' . $par_Str . $l_MemInfo . "\n");
-}
-
-
-///////////////////////////////////////////////////////////////////////////
-function QCR_ScanDirectories($l_RootDir)
-{
-	global $g_Structure, $g_Counter, $g_Doorway, $g_FoundTotalFiles, $g_FoundTotalDirs, 
-			$defaults, $g_SkippedFolders, $g_UrlIgnoreList, $g_DirIgnoreList, $g_UnsafeDirArray, 
-                        $g_UnsafeFilesFound, $g_SymLinks, $g_HiddenFiles, $g_UnixExec, $g_IgnoredExt, $g_SensitiveFiles, 
-						$g_SuspiciousFiles, $g_ShortListExt;
-
-	static $l_Buffer = '';
-
-	$l_DirCounter = 0;
-	$l_DoorwayFilesCounter = 0;
-	$l_SourceDirIndex = $g_Counter - 1;
-
-	QCR_Debug('Scan ' . $l_RootDir);
-
-        $l_QuotedSeparator = quotemeta(DIR_SEPARATOR); 
- 	if ($l_DIRH = @opendir($l_RootDir))
-	{
-		while (($l_FileName = readdir($l_DIRH)) !== false)
-		{
-			if ($l_FileName == '.' || $l_FileName == '..') continue;
-
-			$l_FileName = $l_RootDir . DIR_SEPARATOR . $l_FileName;
-
-			$l_Type = filetype($l_FileName);
-            if ($l_Type == "link") 
-            {
-                $g_SymLinks[] = $l_FileName;
+            if (needIgnore($g_Structure['n'][$par_List[$i]], $g_Structure['crc'][$l_Pos])) {
                 continue;
-            } else			
-			if ($l_Type != "file" && $l_Type != "dir" ) {
-			        if (!in_array($l_FileName, $g_UnixExec)) {
-				   $g_UnixExec[] = $l_FileName;
-				}
+            }
+        }
 
-				continue;
-			}	
-						
-			$l_Ext = strtolower(pathinfo($l_FileName, PATHINFO_EXTENSION));
-			$l_IsDir = is_dir($l_FileName);
+        $l_Creat = $g_Structure['c'][$l_Pos] > 0 ? date("d/m/Y H:i:s", $g_Structure['c'][$l_Pos]) : '-';
+        $l_Modif = $g_Structure['m'][$l_Pos] > 0 ? date("d/m/Y H:i:s", $g_Structure['m'][$l_Pos]) : '-';
+        $l_Size = $g_Structure['s'][$l_Pos] > 0 ? normalize_bytes($g_Structure['s'][$l_Pos]) : '-';
 
-			if (in_array($l_Ext, $g_SuspiciousFiles)) 
-			{
-			        if (!in_array($l_FileName, $g_UnixExec)) {
-                		   $g_UnixExec[] = $l_FileName;
-                                } 
-            		}
+        if ($par_Details != null) {
+            $l_WithMarker = preg_replace('|__AI_MARKER__|smi', '<span class="marker">&nbsp;</span>', $par_Details[$i]);
+            $l_WithMarker = preg_replace('|__AI_LINE1__|smi', '<span class="line_no">', $l_WithMarker);
+            $l_WithMarker = preg_replace('|__AI_LINE2__|smi', '</span>', $l_WithMarker);
 
-			// which files should be scanned
-			$l_NeedToScan = SCAN_ALL_FILES || (in_array($l_Ext, $g_SensitiveFiles));
-			
-			if (in_array(strtolower($l_Ext), $g_IgnoredExt)) {    
-		       $l_NeedToScan = false;
+            $l_Body = '<div class="details">';
+
+            if ($par_SigId != null) {
+                $l_Body .= '<a href="#" onclick="return hsig(\'' . $l_SigId . '\')">[x]</a> ';
             }
 
-			if ($l_IsDir)
-			{
-				// if folder in ignore list
-				$l_Skip = false;
-				for ($dr = 0; $dr < count($g_DirIgnoreList); $dr++) {
-					if (($g_DirIgnoreList[$dr] != '') &&
-						preg_match('#' . $g_DirIgnoreList[$dr] . '#', $l_FileName, $l_Found)) {
-						$l_Skip = true;
-					}
-				}
-			
-				// skip on ignore
-				if ($l_Skip) {
-					$g_SkippedFolders[] = $l_FileName;
-					continue;
-				}
-				
-				$l_BaseName = basename($l_FileName);
+            $l_Body .= $l_WithMarker . '</div>';
+        } else {
+            $l_Body = '';
+        }
 
-				if ((strpos($l_BaseName, '.') === 0) && ($l_BaseName != '.htaccess')) {
-	               $g_HiddenFiles[] = $l_FileName;
-	            }
+        $l_Result .= '<tr class="tbg' . ($i % 2) . '" o="' . $l_SigId . '">';
+
+        if (is_file($g_Structure['n'][$l_Pos])) {
+//		$l_Result .= '<td><div class="it"><a class="it" target="_blank" href="'. $defaults['site_url'] . 'ai-bolit.php?fn=' .
+//	              $g_Structure['n'][$l_Pos] . '&ph=' . realCRC(PASS) . '&c=' . $g_Structure['crc'][$l_Pos] . '">' . $g_Structure['n'][$l_Pos] . '</a></div>' . $l_Body . '</td>';
+            $l_Result .= '<td><div class="it"><a class="it">' . makeSafeFn($g_AddPrefix . str_replace($g_NoPrefix, '', $g_Structure['n'][$l_Pos])) . '</a></div>' . $l_Body . '</td>';
+        } else {
+            $l_Result .= '<td><div class="it"><a class="it">' . makeSafeFn($g_AddPrefix . str_replace($g_NoPrefix, '', $g_Structure['n'][$par_List[$i]])) . '</a></div></td>';
+        }
+
+        $l_Result .= '<td align=center><div class="ctd">' . $l_Creat . '</div></td>';
+        $l_Result .= '<td align=center><div class="ctd">' . $l_Modif . '</div></td>';
+        $l_Result .= '<td align=center><div class="ctd">' . $l_Size . '</div></td>';
+        $l_Result .= '<td class="hidd"><div class="hidd">' . $g_Structure['crc'][$l_Pos] . '</div></td>';
+        $l_Result .= '<td class="hidd"><div class="hidd">' . $g_Structure['c'][$l_Pos] . '</div></td>';
+        $l_Result .= '<td class="hidd"><div class="hidd">' . $g_Structure['m'][$l_Pos] . '</div></td>';
+        $l_Result .= '<td class="hidd"><div class="hidd">' . $l_SigId . '</div></td>';
+        $l_Result .= '</tr>';
+
+    }
+
+    $l_Result .= "</tbody></table></div><div class=clear style=\"margin: 20px 0 0 0\"></div>";
+
+    return $l_Result;
+}
+
+function printPlainList($par_List, $par_Details = null, $par_NeedIgnore = false): string {
+    global $g_Structure, $g_NoPrefix, $g_AddPrefix , $l_Result;
+
+//  $l_Result = "\n#\n";
+
+    $l_Src = array('&quot;', '&lt;', '&gt;', '&amp;', '&#039;');
+    $l_Dst = array('"', '<', '>', '&', '\'');
+
+    for ($i = 0; $i < count($par_List); $i++) {
+        $l_Pos = $par_List[$i];
+        if ($par_NeedIgnore) {
+            if (needIgnore($g_Structure['n'][$par_List[$i]], $g_Structure['crc'][$l_Pos])) {
+                continue;
+            }
+        }
+
+
+        if ($par_Details != null) {
+            $l_Body = preg_replace('|(L\d+).+__AI_MARKER__|smi', '$1: ...', $par_Details[$i]);
+            $l_Body = preg_replace('/[^\x21-\x7F]/', '.', $l_Body);
+            $l_Body = str_replace($l_Src, $l_Dst, $l_Body);
+
+        } else {
+            $l_Body = '';
+        }
+
+        if (is_file($g_Structure['n'][$l_Pos])) {
+            $l_Result .= $g_AddPrefix . str_replace($g_NoPrefix, '', $g_Structure['n'][$l_Pos]) . "\t\t\t" . $l_Body . "\n";
+        } else {
+            $l_Result .= $g_AddPrefix . str_replace($g_NoPrefix, '', $g_Structure['n'][$par_List[$i]]) . "\n";
+        }
+
+    }
+
+    return $l_Result;
+}
+
+function extractValue($par_Str, $par_Name)
+{
+    if (preg_match('|<tr><td class="e">\s*' . $par_Name . '\s*</td><td class="v">(.+?)</td>|sm', $par_Str, $l_Result)) {
+        return str_replace('no value', '', strip_tags($l_Result[1]));
+    }
+    return '';
+}
+
+function QCR_ExtractInfo($par_Str): string {
+    $l_PhpInfoSystem = extractValue($par_Str, 'System');
+    $l_PhpPHPAPI = extractValue($par_Str, 'Server API');
+    $l_AllowUrlFOpen = extractValue($par_Str, 'allow_url_fopen');
+    $l_AllowUrlInclude = extractValue($par_Str, 'allow_url_include');
+    $l_DisabledFunction = extractValue($par_Str, 'disable_functions');
+    $l_DisplayErrors = extractValue($par_Str, 'display_errors');
+    $l_ErrorReporting = extractValue($par_Str, 'error_reporting');
+    $l_ExposePHP = extractValue($par_Str, 'expose_php');
+    $l_LogErrors = extractValue($par_Str, 'log_errors');
+    $l_MQGPC = extractValue($par_Str, 'magic_quotes_gpc');
+    $l_MQRT = extractValue($par_Str, 'magic_quotes_runtime');
+    $l_OpenBaseDir = extractValue($par_Str, 'open_basedir');
+    $l_RegisterGlobals = extractValue($par_Str, 'register_globals');
+    $l_SafeMode = extractValue($par_Str, 'safe_mode');
+
+
+    $l_DisabledFunction = ($l_DisabledFunction == '' ? '-?-' : $l_DisabledFunction);
+    $l_OpenBaseDir = ($l_OpenBaseDir == '' ? '-?-' : $l_OpenBaseDir);
+
+    $l_Result = '<div class="title">' . AI_STR_008 . ': ' . phpversion() . '</div>';
+    $l_Result .= 'System Version: <span class="php_ok">' . $l_PhpInfoSystem . '</span><br/>';
+    $l_Result .= 'PHP API: <span class="php_ok">' . $l_PhpPHPAPI . '</span><br/>';
+    $l_Result .= 'allow_url_fopen: <span class="php_' . ($l_AllowUrlFOpen == 'On' ? 'bad' : 'ok') . '">' . $l_AllowUrlFOpen . '</span><br/>';
+    $l_Result .= 'allow_url_include: <span class="php_' . ($l_AllowUrlInclude == 'On' ? 'bad' : 'ok') . '">' . $l_AllowUrlInclude . '</span><br/>';
+    $l_Result .= 'disable_functions: <span class="php_' . ($l_DisabledFunction == '-?-' ? 'bad' : 'ok') . '">' . $l_DisabledFunction . '</span><br/>';
+    $l_Result .= 'display_errors: <span class="php_' . ($l_DisplayErrors == 'On' ? 'ok' : 'bad') . '">' . $l_DisplayErrors . '</span><br/>';
+    $l_Result .= 'error_reporting: <span class="php_ok">' . $l_ErrorReporting . '</span><br/>';
+    $l_Result .= 'expose_php: <span class="php_' . ($l_ExposePHP == 'On' ? 'bad' : 'ok') . '">' . $l_ExposePHP . '</span><br/>';
+    $l_Result .= 'log_errors: <span class="php_' . ($l_LogErrors == 'On' ? 'ok' : 'bad') . '">' . $l_LogErrors . '</span><br/>';
+    $l_Result .= 'magic_quotes_gpc: <span class="php_' . ($l_MQGPC == 'On' ? 'ok' : 'bad') . '">' . $l_MQGPC . '</span><br/>';
+    $l_Result .= 'magic_quotes_runtime: <span class="php_' . ($l_MQRT == 'On' ? 'bad' : 'ok') . '">' . $l_MQRT . '</span><br/>';
+    $l_Result .= 'register_globals: <span class="php_' . ($l_RegisterGlobals == 'On' ? 'bad' : 'ok') . '">' . $l_RegisterGlobals . '</span><br/>';
+    $l_Result .= 'open_basedir: <span class="php_' . ($l_OpenBaseDir == '-?-' ? 'bad' : 'ok') . '">' . $l_OpenBaseDir . '</span><br/>';
+
+    if (phpversion() < '5.3.0') {
+        $l_Result .= 'safe_mode (PHP < 5.3.0): <span class="php_' . ($l_SafeMode == 'On' ? 'ok' : 'bad') . '">' . $l_SafeMode . '</span><br/>';
+    }
+
+    return $l_Result . '<p>';
+}
+
+function addSlash($dir): string {
+    return rtrim($dir, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+}
+
+function QCR_Debug($par_Str = "") {
+    if (!DEBUG_MODE) {
+        return;
+    }
+
+    $l_MemInfo = ' ';
+    if (function_exists('memory_get_usage')) {
+        $l_MemInfo .= ' curmem=' . normalize_bytes(memory_get_usage());
+    }
+
+    if (function_exists('memory_get_peak_usage')) {
+        $l_MemInfo .= ' maxmem=' . normalize_bytes(memory_get_peak_usage());
+    }
+
+    stdOut("\n" . date('H:i:s') . ': ' . $par_Str . $l_MemInfo . "\n");
+}
+
+function QCR_ScanDirectories($l_RootDir) {
+    global $g_Structure, $g_Counter, $g_Doorway, $g_FoundTotalFiles, $g_FoundTotalDirs,
+           $g_SkippedFolders, $g_DirIgnoreList, $g_SymLinks, $g_HiddenFiles, $g_UnixExec,
+           $g_IgnoredExt, $g_SensitiveFiles, $g_SuspiciousFiles, $g_ShortListExt;
+
+    static $l_Buffer = '';
+
+    $l_DirCounter = 0;
+    $l_DoorwayFilesCounter = 0;
+    $l_SourceDirIndex = $g_Counter - 1;
+
+    QCR_Debug('Scan ' . $l_RootDir);
+
+//    $l_QuotedSeparator = quotemeta(DIR_SEPARATOR);
+    if ($l_DIRH = @opendir($l_RootDir)) {
+        while (($l_FileName = readdir($l_DIRH)) !== false) {
+            if ($l_FileName == '.' || $l_FileName == '..') continue;
+
+            $l_FileName = $l_RootDir . DIR_SEPARATOR . $l_FileName;
+
+            $l_Type = filetype($l_FileName);
+            if ($l_Type == "link") {
+                $g_SymLinks[] = $l_FileName;
+                continue;
+            } else
+                if ($l_Type != "file" && $l_Type != "dir") {
+                    if (!in_array($l_FileName, $g_UnixExec)) {
+                        $g_UnixExec[] = $l_FileName;
+                    }
+
+                    continue;
+                }
+
+            $l_Ext = strtolower(pathinfo($l_FileName, PATHINFO_EXTENSION));
+            $l_IsDir = is_dir($l_FileName);
+
+            if (in_array($l_Ext, $g_SuspiciousFiles)) {
+                if (!in_array($l_FileName, $g_UnixExec)) {
+                    $g_UnixExec[] = $l_FileName;
+                }
+            }
+
+            // which files should be scanned
+            $l_NeedToScan = SCAN_ALL_FILES || (in_array($l_Ext, $g_SensitiveFiles));
+
+            if (in_array(strtolower($l_Ext), $g_IgnoredExt)) {
+                $l_NeedToScan = false;
+            }
+
+            if ($l_IsDir) {
+                // if folder in ignore list
+                $l_Skip = false;
+                for ($dr = 0; $dr < count($g_DirIgnoreList); $dr++) {
+                    if (($g_DirIgnoreList[$dr] != '') &&
+                        preg_match('#' . $g_DirIgnoreList[$dr] . '#', $l_FileName, $l_Found)) {
+                        $l_Skip = true;
+                    }
+                }
+
+                // skip on ignore
+                if ($l_Skip) {
+                    $g_SkippedFolders[] = $l_FileName;
+                    continue;
+                }
+
+                $l_BaseName = basename($l_FileName);
+
+                if ((strpos($l_BaseName, '.') === 0) && ($l_BaseName != '.htaccess')) {
+                    $g_HiddenFiles[] = $l_FileName;
+                }
 
 //				$g_Structure['d'][$g_Counter] = $l_IsDir;
 //				$g_Structure['n'][$g_Counter] = $l_FileName;
-				if (ONE_PASS) {
-					$g_Structure['n'][$g_Counter] = $l_FileName . DIR_SEPARATOR;
-				} else {
-					$l_Buffer .= $l_FileName . DIR_SEPARATOR . "\n";
-				}
+                if (ONE_PASS) {
+                    $g_Structure['n'][$g_Counter] = $l_FileName . DIR_SEPARATOR;
+                } else {
+                    $l_Buffer .= $l_FileName . DIR_SEPARATOR . "\n";
+                }
 
-				$l_DirCounter++;
+                $l_DirCounter++;
 
-				if ($l_DirCounter > MAX_ALLOWED_PHP_HTML_IN_DIR)
-				{
-					$g_Doorway[] = $l_SourceDirIndex;
-					$l_DirCounter = -655360;
-				}
+                if ($l_DirCounter > MAX_ALLOWED_PHP_HTML_IN_DIR) {
+                    $g_Doorway[] = $l_SourceDirIndex;
+                    $l_DirCounter = -655360;
+                }
 
-				$g_Counter++;
-				$g_FoundTotalDirs++;
+                $g_Counter++;
+                $g_FoundTotalDirs++;
 
-				QCR_ScanDirectories($l_FileName);
-			} else
-			{
-				if ($l_NeedToScan)
-				{
-					$g_FoundTotalFiles++;
-					if (in_array($l_Ext, $g_ShortListExt)) 
-					{
-						$l_DoorwayFilesCounter++;
-						
-						if ($l_DoorwayFilesCounter > MAX_ALLOWED_PHP_HTML_IN_DIR)
-						{
-							$g_Doorway[] = $l_SourceDirIndex;
-							$l_DoorwayFilesCounter = -655360;
-						}
-					}
+                QCR_ScanDirectories($l_FileName);
+            } else {
+                if ($l_NeedToScan) {
+                    $g_FoundTotalFiles++;
+                    if (in_array($l_Ext, $g_ShortListExt)) {
+                        $l_DoorwayFilesCounter++;
 
-					if (ONE_PASS) {
-						QCR_ScanFile($l_FileName, $g_Counter++);
-					} else {
-						$l_Buffer .= $l_FileName."\n";
-					}
+                        if ($l_DoorwayFilesCounter > MAX_ALLOWED_PHP_HTML_IN_DIR) {
+                            $g_Doorway[] = $l_SourceDirIndex;
+                            $l_DoorwayFilesCounter = -655360;
+                        }
+                    }
 
-					$g_Counter++;
-				}
-			}
+                    if (ONE_PASS) {
+                        QCR_ScanFile($l_FileName, $g_Counter++);
+                    } else {
+                        $l_Buffer .= $l_FileName . "\n";
+                    }
 
-			if (strlen($l_Buffer) > 32000)
-			{ 
-				file_put_contents(QUEUE_FILENAME, $l_Buffer, FILE_APPEND) or die("Cannot write to file ".QUEUE_FILENAME);
-				$l_Buffer = '';
-			}
+                    $g_Counter++;
+                }
+            }
 
-		}
+            if (strlen($l_Buffer) > 32000) {
+                file_put_contents(QUEUE_FILENAME, $l_Buffer, FILE_APPEND) or die("Cannot write to file " . QUEUE_FILENAME);
+                $l_Buffer = '';
+            }
 
-		closedir($l_DIRH);
-	}
-	
-	if (($l_RootDir == ROOT_PATH) && !empty($l_Buffer)) {
-		file_put_contents(QUEUE_FILENAME, $l_Buffer, FILE_APPEND) or die("Cannot write to file " . QUEUE_FILENAME);
-		$l_Buffer = '';                                                                            
-	}
+        }
+
+        closedir($l_DIRH);
+    }
+
+    if (($l_RootDir == ROOT_PATH) && !empty($l_Buffer)) {
+        file_put_contents(QUEUE_FILENAME, $l_Buffer, FILE_APPEND) or die("Cannot write to file " . QUEUE_FILENAME);
+        $l_Buffer = '';
+    }
 
 }
 
-
-///////////////////////////////////////////////////////////////////////////
 function getFragment($par_Content, $par_Pos) {
-  $l_MaxChars = MAX_PREVIEW_LEN;
-  $l_MaxLen = strlen($par_Content);
-  $l_RightPos = min($par_Pos + $l_MaxChars, $l_MaxLen); 
-  $l_MinPos = max(0, $par_Pos - $l_MaxChars);
+    $l_MaxChars = MAX_PREVIEW_LEN;
+    $l_MaxLen = strlen($par_Content);
+    $l_RightPos = min($par_Pos + $l_MaxChars, $l_MaxLen);
+    $l_MinPos = max(0, $par_Pos - $l_MaxChars);
 
-  $l_FoundStart = substr($par_Content, 0, $par_Pos);
-  $l_FoundStart = str_replace("\r", '', $l_FoundStart);
-  $l_LineNo = strlen($l_FoundStart) - strlen(str_replace("\n", '', $l_FoundStart)) + 1;
+    $l_FoundStart = substr($par_Content, 0, $par_Pos);
+    $l_FoundStart = str_replace("\r", '', $l_FoundStart);
+    $l_LineNo = strlen($l_FoundStart) - strlen(str_replace("\n", '', $l_FoundStart)) + 1;
 
-  $par_Content = preg_replace('/[\x00-\x1F\x80-\xFF]/', '~', $par_Content);
+    $par_Content = preg_replace('/[\x00-\x1F\x80-\xFF]/', '~', $par_Content);
 
-  $l_Res = '__AI_LINE1__' . $l_LineNo . "__AI_LINE2__  " . ($l_MinPos > 0 ? '…' : '') . substr($par_Content, $l_MinPos, $par_Pos - $l_MinPos) . 
-           '__AI_MARKER__' . 
-           substr($par_Content, $par_Pos, $l_RightPos - $par_Pos - 1);
+    $l_Res = '__AI_LINE1__' . $l_LineNo . "__AI_LINE2__  " . ($l_MinPos > 0 ? '…' : '') . substr($par_Content, $l_MinPos, $par_Pos - $l_MinPos) .
+        '__AI_MARKER__' .
+        substr($par_Content, $par_Pos, $l_RightPos - $par_Pos - 1);
 
-  $l_Res = makeSafeFn(UnwrapObfu($l_Res));
-  $l_Res = str_replace('~', '·', $l_Res);
-
-  return $l_Res;
+    $l_Res = makeSafeFn(UnwrapObfu($l_Res));
+    return str_replace('~', '·', $l_Res);
 }
 
-///////////////////////////////////////////////////////////////////////////
-function escapedHexToHex($escaped)
-{ $GLOBALS['g_EncObfu']++; return chr(hexdec($escaped[1])); }
-function escapedOctDec($escaped)
-{ $GLOBALS['g_EncObfu']++; return chr(octdec($escaped[1])); }
-function escapedDec($escaped)
-{ $GLOBALS['g_EncObfu']++; return chr($escaped[1]); }
+function escapedHexToHex($escaped): string {
+    $GLOBALS['g_EncObfu']++;
+    return chr(hexdec($escaped[1]));
+}
 
-///////////////////////////////////////////////////////////////////////////
+function escapedOctDec($escaped): string {
+    $GLOBALS['g_EncObfu']++;
+    return chr(octdec($escaped[1]));
+}
+
+//function escapedDec($escaped): string {
+//    $GLOBALS['g_EncObfu']++;
+//    return chr($escaped[1]);
+//}
+
 if (!defined('T_ML_COMMENT')) {
-   define('T_ML_COMMENT', T_COMMENT);
+    define('T_ML_COMMENT', T_COMMENT);
 } else {
-   define('T_DOC_COMMENT', T_ML_COMMENT);
+    define('T_DOC_COMMENT', T_ML_COMMENT);
 }
 
 function UnwrapObfu($par_Content) {
-  $GLOBALS['g_EncObfu'] = 0;
-  
-  $search  = array( ' ;', ' =', ' ,', ' .', ' (', ' )', ' {', ' }', '; ', '= ', ', ', '. ', '( ', '( ', '{ ', '} ', ' !', ' >', ' <', ' _', '_ ', '< ',  '> ', ' $', ' %',   '% ', '# ', ' #', '^ ', ' ^', ' &', '& ', ' ?', '? ');
-  $replace = array(  ';',  '=',  ',',  '.',  '(',  ')',  '{',  '}', ';',  '=',  ',',  '.',  '(',   ')', '{',  '}',   '!',  '>',  '<',  '_', '_',  '<',   '>',   '$',  '%',   '%',  '#',   '#', '^',   '^',  '&', '&',   '?', '?');
-  $par_Content = str_replace('@', '', $par_Content);
-  $par_Content = preg_replace('~\s+~', ' ', $par_Content);
-  $par_Content = str_replace($search, $replace, $par_Content);
-  $par_Content = preg_replace_callback('~\bchr\(\s*([0-9a-fA-FxX]+)\s*\)~', function ($m) { return "'".chr(intval($m[1], 0))."'"; }, $par_Content );
+    $GLOBALS['g_EncObfu'] = 0;
 
-  $par_Content = preg_replace_callback('/\\\\x([a-fA-F0-9]{1,2})/i','escapedHexToHex', $par_Content);
-  $par_Content = preg_replace_callback('/\\\\([0-9]{1,3})/i','escapedOctDec', $par_Content);
+    $search = array(' ;', ' =', ' ,', ' .', ' (', ' )', ' {', ' }', '; ', '= ', ', ', '. ', '( ', '( ', '{ ', '} ', ' !', ' >', ' <', ' _', '_ ', '< ', '> ', ' $', ' %', '% ', '# ', ' #', '^ ', ' ^', ' &', '& ', ' ?', '? ');
+    $replace = array(';', '=', ',', '.', '(', ')', '{', '}', ';', '=', ',', '.', '(', ')', '{', '}', '!', '>', '<', '_', '_', '<', '>', '$', '%', '%', '#', '#', '^', '^', '&', '&', '?', '?');
+    $par_Content = str_replace('@', '', $par_Content);
+    $par_Content = preg_replace('~\s+~', ' ', $par_Content);
+    $par_Content = str_replace($search, $replace, $par_Content);
+    $par_Content = preg_replace_callback('~\bchr\(\s*([0-9a-fA-FxX]+)\s*\)~', function ($m) {
+        return "'" . chr(intval($m[1], 0)) . "'";
+    }, $par_Content);
 
-  $par_Content = preg_replace('/[\'"]\s*?\.+\s*?[\'"]/smi', '', $par_Content);
-  $par_Content = preg_replace('/[\'"]\s*?\++\s*?[\'"]/smi', '', $par_Content);
-
-  return $par_Content;
+    $par_Content = preg_replace_callback('/\\\\x([a-fA-F0-9]{1,2})/i', 'escapedHexToHex', $par_Content);
+    $par_Content = preg_replace_callback('/\\\\([0-9]{1,3})/i', 'escapedOctDec', $par_Content);
+    $par_Content = preg_replace('/[\'"]\s*?\.+\s*?[\'"]/smi', '', $par_Content);
+    return preg_replace('/[\'"]\s*?\++\s*?[\'"]/smi', '', $par_Content);
 }
 
-
-///////////////////////////////////////////////////////////////////////////
 // Unicode BOM is U+FEFF, but after encoded, it will look like this.
-define ('UTF32_BIG_ENDIAN_BOM'   , chr(0x00) . chr(0x00) . chr(0xFE) . chr(0xFF));
-define ('UTF32_LITTLE_ENDIAN_BOM', chr(0xFF) . chr(0xFE) . chr(0x00) . chr(0x00));
-define ('UTF16_BIG_ENDIAN_BOM'   , chr(0xFE) . chr(0xFF));
-define ('UTF16_LITTLE_ENDIAN_BOM', chr(0xFF) . chr(0xFE));
-define ('UTF8_BOM'               , chr(0xEF) . chr(0xBB) . chr(0xBF));
+define('UTF32_BIG_ENDIAN_BOM', chr(0x00) . chr(0x00) . chr(0xFE) . chr(0xFF));
+define('UTF32_LITTLE_ENDIAN_BOM', chr(0xFF) . chr(0xFE) . chr(0x00) . chr(0x00));
+define('UTF16_BIG_ENDIAN_BOM', chr(0xFE) . chr(0xFF));
+define('UTF16_LITTLE_ENDIAN_BOM', chr(0xFF) . chr(0xFE));
+define('UTF8_BOM', chr(0xEF) . chr(0xBB) . chr(0xBF));
 
 function detect_utf_encoding($text) {
     $first2 = substr($text, 0, 2);
     $first3 = substr($text, 0, 3);
     $first4 = substr($text, 0, 3);
-    
+
     if ($first3 == UTF8_BOM) return 'UTF-8';
     elseif ($first4 == UTF32_BIG_ENDIAN_BOM) return 'UTF-32BE';
     elseif ($first4 == UTF32_LITTLE_ENDIAN_BOM) return 'UTF-32LE';
@@ -2455,1142 +1884,1065 @@ function detect_utf_encoding($text) {
     return false;
 }
 
-///////////////////////////////////////////////////////////////////////////
-function QCR_SearchPHP($src)
-{
-  if (preg_match("/(<\?php[\w\s]{5,})/smi", $src, $l_Found, PREG_OFFSET_CAPTURE)) {
-	  return $l_Found[0][1];
-  }
+function QCR_SearchPHP($src) {
+    if (preg_match("/(<\?php[\w\s]{5,})/smi", $src, $l_Found, PREG_OFFSET_CAPTURE)) {
+        return $l_Found[0][1];
+    }
 
-  if (preg_match("/(<script[^>]*language\s*=\s*)('|\"|)php('|\"|)([^>]*>)/i", $src, $l_Found, PREG_OFFSET_CAPTURE)) {
-    return $l_Found[0][1];
-  }
+    if (preg_match("/(<script[^>]*language\s*=\s*)('|\"|)php('|\"|)([^>]*>)/i", $src, $l_Found, PREG_OFFSET_CAPTURE)) {
+        return $l_Found[0][1];
+    }
 
-  return false;
+    return false;
 }
 
+function knowUrl($par_URL): bool {
+    global $g_UrlIgnoreList;
 
-///////////////////////////////////////////////////////////////////////////
-function knowUrl($par_URL) {
-  global $g_UrlIgnoreList;
-
-  for ($jk = 0; $jk < count($g_UrlIgnoreList); $jk++) {
-     if  (stripos($par_URL, $g_UrlIgnoreList[$jk]) !== false) {
-     	return true;
-     }
-  }
-
-  return false;
+    for ($jk = 0; $jk < count($g_UrlIgnoreList); $jk++) {
+        if (stripos($par_URL, $g_UrlIgnoreList[$jk]) !== false) {
+            return true;
+        }
+    }
+    return false;
 }
 
-///////////////////////////////////////////////////////////////////////////
-
-function makeSummary($par_Str, $par_Number, $par_Style) {
-   return '<tr><td class="' . $par_Style . '" width=400>' . $par_Str . '</td><td class="' . $par_Style . '">' . $par_Number . '</td></tr>';
+function makeSummary($par_Str, $par_Number, $par_Style): string {
+    return '<tr><td class="' . $par_Style . '" width=400>' . $par_Str . '</td><td class="' . $par_Style . '">' . $par_Number . '</td></tr>';
 }
 
-///////////////////////////////////////////////////////////////////////////
-
-function CheckVulnerability($par_Filename, $par_Index, $par_Content) {
+function CheckVulnerability($par_Filename, $par_Index, $par_Content): bool {
     global $g_Vulnerable, $g_CmsListDetector;
-	
-	$l_Vuln = array();
+    $l_Vuln = array();
+    $par_Filename = strtolower($par_Filename);
 
-        $par_Filename = strtolower($par_Filename);
+    if (
+        (strpos($par_Filename, 'libraries/joomla/session/session.php') !== false) &&
+        (strpos($par_Content, '&& filter_var($_SERVER[\'HTTP_X_FORWARDED_FOR') === false)
+    ) {
+        $l_Vuln['id'] = 'RCE : https://docs.joomla.org/Security_hotfixes_for_Joomla_EOL_versions';
+        $l_Vuln['ndx'] = $par_Index;
+        $g_Vulnerable[] = $l_Vuln;
+        return true;
+    }
 
+    if (
+        (strpos($par_Filename, 'administrator/components/com_media/helpers/media.php') !== false) &&
+        (strpos($par_Content, '$format == \'\' || $format == false ||') === false)
+    ) {
+        if ($g_CmsListDetector->isCms(CMS_JOOMLA, '1.5')) {
+            $l_Vuln['id'] = 'AFU : https://docs.joomla.org/Security_hotfixes_for_Joomla_EOL_versions';
+            $l_Vuln['ndx'] = $par_Index;
+            $g_Vulnerable[] = $l_Vuln;
+            return true;
+        }
+        return false;
+    }
 
-	if (
-	    (strpos($par_Filename, 'libraries/joomla/session/session.php') !== false) &&
-		(strpos($par_Content, '&& filter_var($_SERVER[\'HTTP_X_FORWARDED_FOR') === false)
-		) 
-	{		
-			$l_Vuln['id'] = 'RCE : https://docs.joomla.org/Security_hotfixes_for_Joomla_EOL_versions';
-			$l_Vuln['ndx'] = $par_Index;
-			$g_Vulnerable[] = $l_Vuln;
-			return true;
-	}
+    if (
+        (strpos($par_Filename, 'joomla/filesystem/file.php') !== false) &&
+        (strpos($par_Content, '$file = rtrim($file, \'.\');') === false)
+    ) {
+        if ($g_CmsListDetector->isCms(CMS_JOOMLA, '1.5')) {
+            $l_Vuln['id'] = 'AFU : https://docs.joomla.org/Security_hotfixes_for_Joomla_EOL_versions';
+            $l_Vuln['ndx'] = $par_Index;
+            $g_Vulnerable[] = $l_Vuln;
+            return true;
+        }
+        return false;
+    }
 
-	if (
-	    (strpos($par_Filename, 'administrator/components/com_media/helpers/media.php') !== false) &&
-		(strpos($par_Content, '$format == \'\' || $format == false ||') === false)
-		) 
-	{		
-		if ($g_CmsListDetector->isCms(CMS_JOOMLA, '1.5')) {
-			$l_Vuln['id'] = 'AFU : https://docs.joomla.org/Security_hotfixes_for_Joomla_EOL_versions';
-			$l_Vuln['ndx'] = $par_Index;
-			$g_Vulnerable[] = $l_Vuln;
-			return true;
-		}
-		
-		return false;
-	}
+    if ((strpos($par_Filename, 'editor/filemanager/upload/test.html') !== false) ||
+        (stripos($par_Filename, 'editor/filemanager/browser/default/connectors/php/') !== false) ||
+        (stripos($par_Filename, 'editor/filemanager/connectors/uploadtest.html') !== false) ||
+        (strpos($par_Filename, 'editor/filemanager/browser/default/connectors/test.html') !== false)) {
+        $l_Vuln['id'] = 'AFU : FCKEDITOR : http://www.exploit-db.com/exploits/17644/ & /exploit/249';
+        $l_Vuln['ndx'] = $par_Index;
+        $g_Vulnerable[] = $l_Vuln;
+        return true;
+    }
 
-	if (
-	    (strpos($par_Filename, 'joomla/filesystem/file.php') !== false) &&
-		(strpos($par_Content, '$file = rtrim($file, \'.\');') === false)
-		) 
-	{		
-		if ($g_CmsListDetector->isCms(CMS_JOOMLA, '1.5')) {
-			$l_Vuln['id'] = 'AFU : https://docs.joomla.org/Security_hotfixes_for_Joomla_EOL_versions';
-			$l_Vuln['ndx'] = $par_Index;
-			$g_Vulnerable[] = $l_Vuln;
-			return true;
-		}
-		
-		return false;
-	}
+    if ((strpos($par_Filename, 'inc_php/image_view.class.php') !== false) ||
+        (strpos($par_Filename, '/inc_php/framework/image_view.class.php') !== false)) {
+        if (strpos($par_Content, 'showImageByID') === false) {
+            $l_Vuln['id'] = 'AFU : REVSLIDER : http://www.exploit-db.com/exploits/35385/';
+            $l_Vuln['ndx'] = $par_Index;
+            $g_Vulnerable[] = $l_Vuln;
+            return true;
+        }
+        return false;
+    }
 
-	if ((strpos($par_Filename, 'editor/filemanager/upload/test.html') !== false) ||
-		(stripos($par_Filename, 'editor/filemanager/browser/default/connectors/php/') !== false) ||
-		(stripos($par_Filename, 'editor/filemanager/connectors/uploadtest.html') !== false) ||
-	   (strpos($par_Filename, 'editor/filemanager/browser/default/connectors/test.html') !== false)) {
-		$l_Vuln['id'] = 'AFU : FCKEDITOR : http://www.exploit-db.com/exploits/17644/ & /exploit/249';
-		$l_Vuln['ndx'] = $par_Index;
-		$g_Vulnerable[] = $l_Vuln;
-		return true;
-	}
+    if ((strpos($par_Filename, 'elfinder/php/connector.php') !== false) ||
+        (strpos($par_Filename, 'elfinder/elfinder.') !== false)) {
+        $l_Vuln['id'] = 'AFU : elFinder';
+        $l_Vuln['ndx'] = $par_Index;
+        $g_Vulnerable[] = $l_Vuln;
+        return true;
+    }
 
-	if ((strpos($par_Filename, 'inc_php/image_view.class.php') !== false) ||
-	    (strpos($par_Filename, '/inc_php/framework/image_view.class.php') !== false)) {
-		if (strpos($par_Content, 'showImageByID') === false) {
-			$l_Vuln['id'] = 'AFU : REVSLIDER : http://www.exploit-db.com/exploits/35385/';
-			$l_Vuln['ndx'] = $par_Index;
-			$g_Vulnerable[] = $l_Vuln;
-			return true;
-		}
-		
-		return false;
-	}
+    if (strpos($par_Filename, 'includes/database/database.inc') !== false) {
+        if (strpos($par_Content, 'foreach ($data as $i => $value)') !== false) {
+            $l_Vuln['id'] = 'SQLI : DRUPAL : CVE-2014-3704';
+            $l_Vuln['ndx'] = $par_Index;
+            $g_Vulnerable[] = $l_Vuln;
+            return true;
+        }
+        return false;
+    }
 
-	if ((strpos($par_Filename, 'elfinder/php/connector.php') !== false) ||
-	    (strpos($par_Filename, 'elfinder/elfinder.') !== false)) {
-			$l_Vuln['id'] = 'AFU : elFinder';
-			$l_Vuln['ndx'] = $par_Index;
-			$g_Vulnerable[] = $l_Vuln;
-			return true;
-	}
+    if (strpos($par_Filename, 'engine/classes/min/index.php') !== false) {
+        if (strpos($par_Content, 'tr_replace(chr(0)') === false) {
+            $l_Vuln['id'] = 'AFD : MINIFY : CVE-2013-6619';
+            $l_Vuln['ndx'] = $par_Index;
+            $g_Vulnerable[] = $l_Vuln;
+            return true;
+        }
+        return false;
+    }
 
-	if (strpos($par_Filename, 'includes/database/database.inc') !== false) {
-		if (strpos($par_Content, 'foreach ($data as $i => $value)') !== false) {
-			$l_Vuln['id'] = 'SQLI : DRUPAL : CVE-2014-3704';
-			$l_Vuln['ndx'] = $par_Index;
-			$g_Vulnerable[] = $l_Vuln;
-			return true;
-		}
-		
-		return false;
-	}
+    if ((strpos($par_Filename, 'timthumb.php') !== false) ||
+        (strpos($par_Filename, 'thumb.php') !== false) ||
+        (strpos($par_Filename, 'cache.php') !== false) ||
+        (strpos($par_Filename, '_img.php') !== false)) {
+        if (strpos($par_Content, 'code.google.com/p/timthumb') !== false && strpos($par_Content, '2.8.14') === false) {
+            $l_Vuln['id'] = 'RCE : TIMTHUMB : CVE-2011-4106,CVE-2014-4663';
+            $l_Vuln['ndx'] = $par_Index;
+            $g_Vulnerable[] = $l_Vuln;
+            return true;
+        }
+        return false;
+    }
 
-	if (strpos($par_Filename, 'engine/classes/min/index.php') !== false) {
-		if (strpos($par_Content, 'tr_replace(chr(0)') === false) {
-			$l_Vuln['id'] = 'AFD : MINIFY : CVE-2013-6619';
-			$l_Vuln['ndx'] = $par_Index;
-			$g_Vulnerable[] = $l_Vuln;
-			return true;
-		}
-		
-		return false;
-	}
+    if (strpos($par_Filename, 'components/com_rsform/helpers/rsform.php') !== false) {
+        if (strpos($par_Content, 'eval($form->ScriptDisplay);') !== false) {
+            $l_Vuln['id'] = 'RCE : RSFORM : rsform.php, LINE 1605';
+            $l_Vuln['ndx'] = $par_Index;
+            $g_Vulnerable[] = $l_Vuln;
+            return true;
+        }
+        return false;
+    }
 
-	if (( strpos($par_Filename, 'timthumb.php') !== false ) || 
-	    ( strpos($par_Filename, 'thumb.php') !== false ) || 
-	    ( strpos($par_Filename, 'cache.php') !== false ) || 
-	    ( strpos($par_Filename, '_img.php') !== false )) {
-		if (strpos($par_Content, 'code.google.com/p/timthumb') !== false && strpos($par_Content, '2.8.14') === false ) {
-			$l_Vuln['id'] = 'RCE : TIMTHUMB : CVE-2011-4106,CVE-2014-4663';
-			$l_Vuln['ndx'] = $par_Index;
-			$g_Vulnerable[] = $l_Vuln;
-			return true;
-		}
-		
-		return false;
-	}
-
-	if (strpos($par_Filename, 'components/com_rsform/helpers/rsform.php') !== false) {
-		if (strpos($par_Content, 'eval($form->ScriptDisplay);') !== false) {
-			$l_Vuln['id'] = 'RCE : RSFORM : rsform.php, LINE 1605';
-			$l_Vuln['ndx'] = $par_Index;
-			$g_Vulnerable[] = $l_Vuln;
-			return true;
-		}
-		
-		return false;
-	}
-
-	if (strpos($par_Filename, 'fancybox-for-wordpress/fancybox.php') !== false) {
-		if (strpos($par_Content, '\'reset\' == $_REQUEST[\'action\']') !== false) {
-			$l_Vuln['id'] = 'CODE INJECTION : FANCYBOX';
-			$l_Vuln['ndx'] = $par_Index;
-			$g_Vulnerable[] = $l_Vuln;
-			return true;
-		}
-		
-		return false;
-	}
+    if (strpos($par_Filename, 'fancybox-for-wordpress/fancybox.php') !== false) {
+        if (strpos($par_Content, '\'reset\' == $_REQUEST[\'action\']') !== false) {
+            $l_Vuln['id'] = 'CODE INJECTION : FANCYBOX';
+            $l_Vuln['ndx'] = $par_Index;
+            $g_Vulnerable[] = $l_Vuln;
+            return true;
+        }
+        return false;
+    }
 
 
-	if (strpos($par_Filename, 'cherry-plugin/admin/import-export/upload.php') !== false) {
-		if (strpos($par_Content, 'verify nonce') === false) {
-			$l_Vuln['id'] = 'AFU : Cherry Plugin';
-			$l_Vuln['ndx'] = $par_Index;
-			$g_Vulnerable[] = $l_Vuln;
-			return true;
-		}
-		
-		return false;
-	}
-	
-	
-	if (strpos($par_Filename, 'tiny_mce/plugins/tinybrowser/tinybrowser.php') !== false) {	
-		$l_Vuln['id'] = 'AFU : TINYMCE : http://www.exploit-db.com/exploits/9296/';
-		$l_Vuln['ndx'] = $par_Index;
-		$g_Vulnerable[] = $l_Vuln;
-		
-		return true;
-	}
-
-	if (strpos($par_Filename, 'scripts/setup.php') !== false) {		
-		if (strpos($par_Content, 'PMA_Config') !== false) {
-			$l_Vuln['id'] = 'CODE INJECTION : PHPMYADMIN : http://1337day.com/exploit/5334';
-			$l_Vuln['ndx'] = $par_Index;
-			$g_Vulnerable[] = $l_Vuln;
-			return true;
-		}
-		
-		return false;
-	}
-
-	if (strpos($par_Filename, '/uploadify.php') !== false) {		
-		if (strpos($par_Content, 'move_uploaded_file($tempFile,$targetFile') !== false) {
-			$l_Vuln['id'] = 'AFU : UPLOADIFY : CVE: 2012-1153';
-			$l_Vuln['ndx'] = $par_Index;
-			$g_Vulnerable[] = $l_Vuln;
-			return true;
-		}
-		
-		return false;
-	}
-
-	if (strpos($par_Filename, 'com_adsmanager/controller.php') !== false) {		
-		if (strpos($par_Content, 'move_uploaded_file($file[\'tmp_name\'], $tempPath.\'/\'.basename($file[') !== false) {
-			$l_Vuln['id'] = 'AFU : https://revisium.com/ru/blog/adsmanager_afu.html';
-			$l_Vuln['ndx'] = $par_Index;
-			$g_Vulnerable[] = $l_Vuln;
-			return true;
-		}
-		
-		return false;
-	}
-
-	if (strpos($par_Filename, 'wp-content/plugins/wp-mobile-detector/resize.php') !== false) {		
-		if (strpos($par_Content, 'file_put_contents($path, file_get_contents($_REQUEST[\'src\']));') !== false) {
-			$l_Vuln['id'] = 'AFU : https://www.pluginvulnerabilities.com/2016/05/31/aribitrary-file-upload-vulnerability-in-wp-mobile-detector/';
-			$l_Vuln['ndx'] = $par_Index;
-			$g_Vulnerable[] = $l_Vuln;
-			return true;
-		}
-		
-		return false;
-	}
+    if (strpos($par_Filename, 'cherry-plugin/admin/import-export/upload.php') !== false) {
+        if (strpos($par_Content, 'verify nonce') === false) {
+            $l_Vuln['id'] = 'AFU : Cherry Plugin';
+            $l_Vuln['ndx'] = $par_Index;
+            $g_Vulnerable[] = $l_Vuln;
+            return true;
+        }
+        return false;
+    }
 
 
+    if (strpos($par_Filename, 'tiny_mce/plugins/tinybrowser/tinybrowser.php') !== false) {
+        $l_Vuln['id'] = 'AFU : TINYMCE : http://www.exploit-db.com/exploits/9296/';
+        $l_Vuln['ndx'] = $par_Index;
+        $g_Vulnerable[] = $l_Vuln;
+        return true;
+    }
 
+    if (strpos($par_Filename, 'scripts/setup.php') !== false) {
+        if (strpos($par_Content, 'PMA_Config') !== false) {
+            $l_Vuln['id'] = 'CODE INJECTION : PHPMYADMIN : http://1337day.com/exploit/5334';
+            $l_Vuln['ndx'] = $par_Index;
+            $g_Vulnerable[] = $l_Vuln;
+            return true;
+        }
+        return false;
+    }
 
+    if (strpos($par_Filename, '/uploadify.php') !== false) {
+        if (strpos($par_Content, 'move_uploaded_file($tempFile,$targetFile') !== false) {
+            $l_Vuln['id'] = 'AFU : UPLOADIFY : CVE: 2012-1153';
+            $l_Vuln['ndx'] = $par_Index;
+            $g_Vulnerable[] = $l_Vuln;
+            return true;
+        }
+        return false;
+    }
+
+    if (strpos($par_Filename, 'com_adsmanager/controller.php') !== false) {
+        if (strpos($par_Content, 'move_uploaded_file($file[\'tmp_name\'], $tempPath.\'/\'.basename($file[') !== false) {
+            $l_Vuln['id'] = 'AFU : https://revisium.com/ru/blog/adsmanager_afu.html';
+            $l_Vuln['ndx'] = $par_Index;
+            $g_Vulnerable[] = $l_Vuln;
+            return true;
+        }
+        return false;
+    }
+
+    if (strpos($par_Filename, 'wp-content/plugins/wp-mobile-detector/resize.php') !== false) {
+        if (strpos($par_Content, 'file_put_contents($path, file_get_contents($_REQUEST[\'src\']));') !== false) {
+            $l_Vuln['id'] = 'AFU : https://www.pluginvulnerabilities.com/2016/05/31/aribitrary-file-upload-vulnerability-in-wp-mobile-detector/';
+            $l_Vuln['ndx'] = $par_Index;
+            $g_Vulnerable[] = $l_Vuln;
+            return true;
+        }
+        return false;
+    }
+    return false;
 }
 
-///////////////////////////////////////////////////////////////////////////
-function QCR_GoScan($par_Offset)
-{
-	global $g_IframerFragment, $g_Iframer, $g_Redirect, $g_Doorway, $g_EmptyLink, $g_Structure, $g_Counter, 
-		   $g_HeuristicType, $g_HeuristicDetected, $g_TotalFolder, $g_TotalFiles, $g_WarningPHP, $g_AdwareList,
-		   $g_CriticalPHP, $g_Phishing, $g_CriticalJS, $g_UrlIgnoreList, $g_CriticalJSFragment, $g_PHPCodeInside, $g_PHPCodeInsideFragment, 
-		   $g_NotRead, $g_WarningPHPFragment, $g_WarningPHPSig, $g_BigFiles, $g_RedirectPHPFragment, $g_EmptyLinkSrc, $g_CriticalPHPSig, $g_CriticalPHPFragment, 
-           $g_Base64Fragment, $g_UnixExec, $g_PhishingSigFragment, $g_PhishingFragment, $g_PhishingSig, $g_CriticalJSSig, $g_IframerFragment, $g_CMS, $defaults, $g_AdwareListFragment, $g_KnownList,$g_Vulnerable;
-
+function QCR_GoScan($par_Offset) {
     QCR_Debug('QCR_GoScan ' . $par_Offset);
+    $i = 0;
+    try {
+        $s_file = new SplFileObject(QUEUE_FILENAME);
+        $s_file->setFlags(SplFileObject::READ_AHEAD | SplFileObject::SKIP_EMPTY | SplFileObject::DROP_NEW_LINE);
 
-	$i = 0;
-	
-	try {
-		$s_file = new SplFileObject(QUEUE_FILENAME);
-		$s_file->setFlags(SplFileObject::READ_AHEAD | SplFileObject::SKIP_EMPTY | SplFileObject::DROP_NEW_LINE);
+        foreach ($s_file as $l_Filename) {
+            QCR_ScanFile($l_Filename, $i++);
+        }
 
-		foreach ($s_file as $l_Filename) {
-			QCR_ScanFile($l_Filename, $i++);
-		}
-		
-		unset($s_file);	
-	}
-	catch (Exception $e) { QCR_Debug( $e->getMessage() ); }
+        unset($s_file);
+    } catch (Exception $e) {
+        QCR_Debug($e->getMessage());
+    }
 }
 
-///////////////////////////////////////////////////////////////////////////
 function QCR_ScanFile($l_Filename, $i = 0)
 {
-	global $g_IframerFragment, $g_Iframer, $g_Redirect, $g_Doorway, $g_EmptyLink, $g_Structure, $g_Counter, 
-		   $g_HeuristicType, $g_HeuristicDetected, $g_TotalFolder, $g_TotalFiles, $g_WarningPHP, $g_AdwareList,
-		   $g_CriticalPHP, $g_Phishing, $g_CriticalJS, $g_UrlIgnoreList, $g_CriticalJSFragment, $g_PHPCodeInside, $g_PHPCodeInsideFragment, 
-		   $g_NotRead, $g_WarningPHPFragment, $g_WarningPHPSig, $g_BigFiles, $g_RedirectPHPFragment, $g_EmptyLinkSrc, $g_CriticalPHPSig, $g_CriticalPHPFragment, 
-           $g_Base64Fragment, $g_UnixExec, $g_PhishingSigFragment, $g_PhishingFragment, $g_PhishingSig, $g_CriticalJSSig, $g_IframerFragment, $g_CMS, $defaults, $g_AdwareListFragment, $g_KnownList,$g_Vulnerable;
+    global $g_Iframer, $g_Redirect, $g_EmptyLink, $g_Structure, $g_HeuristicType, $g_HeuristicDetected,
+           $g_TotalFolder, $g_TotalFiles, $g_WarningPHP, $g_AdwareList, $g_CriticalPHP, $g_Phishing,
+           $g_CriticalJS, $g_CriticalJSFragment, $g_PHPCodeInside, $g_PHPCodeInsideFragment, $g_NotRead,
+           $g_WarningPHPFragment, $g_WarningPHPSig, $g_BigFiles, $g_RedirectPHPFragment, $g_EmptyLinkSrc,
+           $g_CriticalPHPSig, $g_CriticalPHPFragment, $g_UnixExec, $g_PhishingSigFragment, $g_PhishingFragment,
+           $g_CriticalJSSig, $g_IframerFragment, $defaults, $g_AdwareListFragment, $l_Content, $g_CRC,
+           $l_Unwrapped, $l_TSStartScan, $g_SkipNextCheck;
+    static $_files_and_ignored = 0;
 
-	global $g_CRC;
-	static $_files_and_ignored = 0;
+    $l_CriticalDetected = false;
+    $l_Stat = stat($l_Filename);
 
-			$l_CriticalDetected = false;
-			$l_Stat = stat($l_Filename);
+    if (substr($l_Filename, -1) == DIR_SEPARATOR) {
+        // FOLDER
+        $g_Structure['n'][$i] = $l_Filename;
+        $g_TotalFolder++;
+        printProgress($_files_and_ignored, $l_Filename);
+        return;
+    }
 
-			if (substr($l_Filename, -1) == DIR_SEPARATOR) {
-				// FOLDER
-				$g_Structure['n'][$i] = $l_Filename;
-				$g_TotalFolder++;
-				printProgress($_files_and_ignored, $l_Filename);
-				return;
-			}
+    QCR_Debug('Scan file ' . $l_Filename);
+    printProgress(++$_files_and_ignored, $l_Filename);
 
-			QCR_Debug('Scan file ' . $l_Filename);
-			printProgress(++$_files_and_ignored, $l_Filename);
+    // FILE
+    if ((MAX_SIZE_TO_SCAN > 0 and $l_Stat['size'] > MAX_SIZE_TO_SCAN) || ($l_Stat['size'] < 0)) {
+        $g_BigFiles[] = $i;
+        AddResult($l_Filename, $i);
+    } else {
+        $g_TotalFiles++;
+        $l_TSStartScan = microtime(true);
 
-			// FILE
-			if ((MAX_SIZE_TO_SCAN > 0 AND $l_Stat['size'] > MAX_SIZE_TO_SCAN) || ($l_Stat['size'] < 0))
-			{
-				$g_BigFiles[] = $i;
-				AddResult($l_Filename, $i);
-			}
-			else
-			{
-				$g_TotalFiles++;
+        if (filetype($l_Filename) == 'file') {
+            $l_Content = @file_get_contents($l_Filename);
+            if (SHORT_PHP_TAG) {
+                echo '';
+//                      $l_Content = preg_replace('|<\?\s|smiS', '<?php ', $l_Content);
+            }
 
-			$l_TSStartScan = microtime(true);
+            $l_Unwrapped = @php_strip_whitespace($l_Filename);
+        }
 
-		if (filetype($l_Filename) == 'file') {
-                   $l_Content = @file_get_contents($l_Filename);
-		   if (SHORT_PHP_TAG) {
-//                      $l_Content = preg_replace('|<\?\s|smiS', '<?php ', $l_Content); 
-                   }
+        $l_Ext = strtolower(pathinfo($l_Filename, PATHINFO_EXTENSION));
 
-                   $l_Unwrapped = @php_strip_whitespace($l_Filename);
-                }
+        if (($l_Content == '') && ($l_Stat['size'] > 0)) {
+            $g_NotRead[] = $i;
+            AddResult('[io] ' . $l_Filename, $i);
+            return;
+        }
 
-		        $l_Ext = strtolower(pathinfo($l_Filename, PATHINFO_EXTENSION));
-		
-                if (($l_Content == '') && ($l_Stat['size'] > 0)) {
-                   $g_NotRead[] = $i;
-                   AddResult('[io] ' . $l_Filename, $i);
-                   return;
-                }
+        // ignore itself
+        if (strpos($l_Content, '@@AIBOLIT_SIG_000000000000@@') !== false) {
+            return;
+        }
 
-				// ignore itself
-				if (strpos($l_Content, '@@AIBOLIT_SIG_000000000000@@') !== false) {
-					return;
-				}
+        // unix executables
+        if (strpos($l_Content, chr(127) . 'ELF') !== false) {
+            if (!in_array($l_Filename, $g_UnixExec)) {
+                $g_UnixExec[] = $l_Filename;
+            }
 
-				// unix executables
-				if (strpos($l_Content, chr(127) . 'ELF') !== false) 
-				{
-			        	if (!in_array($l_Filename, $g_UnixExec)) {
-                    				$g_UnixExec[] = $l_Filename;
-					}
+            return;
+        }
 
-				        return;
-                		}
-
-				$g_CRC = _hash_($l_Unwrapped);
+        $g_CRC = _hash_($l_Unwrapped);
 
 
-				$l_UnicodeContent = detect_utf_encoding($l_Content);
-				//$l_Unwrapped = $l_Content;
+        $l_UnicodeContent = detect_utf_encoding($l_Content);
+        //$l_Unwrapped = $l_Content;
 
-				// check vulnerability in files
-				$l_CriticalDetected = CheckVulnerability($l_Filename, $i, $l_Content);				
+        // check vulnerability in files
+        $l_CriticalDetected = CheckVulnerability($l_Filename, $i, $l_Content);
 
-				if ($l_UnicodeContent !== false) {
-       				   if (function_exists('iconv')) {
-				      $l_Unwrapped = iconv($l_UnicodeContent, "CP1251//IGNORE", $l_Unwrapped);
+        if ($l_UnicodeContent !== false) {
+            if (function_exists('iconv')) {
+                $l_Unwrapped = iconv($l_UnicodeContent, "CP1251//IGNORE", $l_Unwrapped);
 //       			   if (function_exists('mb_convert_encoding')) {
 //                                    $l_Unwrapped = mb_convert_encoding($l_Unwrapped, $l_UnicodeContent, "CP1251");
-                                   } else {
-                                      $g_NotRead[] = $i;
-                                      AddResult('[ec] ' . $l_Filename, $i);
-				   }
-                                }
+            } else {
+                $g_NotRead[] = $i;
+                AddResult('[ec] ' . $l_Filename, $i);
+            }
+        }
 
-				$l_Unwrapped = UnwrapObfu($l_Unwrapped);
-				
-				// critical
-				$g_SkipNextCheck = false;
+        $l_Unwrapped = UnwrapObfu($l_Unwrapped);
 
-				if (CriticalPHP($l_Filename, $i, $l_Unwrapped, $l_Pos, $l_SigId))
-				{
-					$g_CriticalPHP[] = $i;
-					$g_CriticalPHPFragment[] = getFragment($l_Unwrapped, $l_Pos);
-					$g_CriticalPHPSig[] = $l_SigId;
-					$g_SkipNextCheck = true;
-				} else {
-         				if (CriticalPHP($l_Filename, $i, $l_Content, $l_Pos, $l_SigId))
-         				{
-         					$g_CriticalPHP[] = $i;
-         					$g_CriticalPHPFragment[] = getFragment($l_Content, $l_Pos);
-							$g_CriticalPHPSig[] = $l_SigId;
-         					$g_SkipNextCheck = true;
-         				}
-				}
+        // critical
+        $g_SkipNextCheck = false;
 
-				$l_TypeDe = 0;
-			    if ((!$g_SkipNextCheck) && HeuristicChecker($l_Content, $l_TypeDe, $l_Filename)) {
-					$g_HeuristicDetected[] = $i;
-					$g_HeuristicType[] = $l_TypeDe;
-					$l_CriticalDetected = true;
-				}
+        if (CriticalPHP($l_Filename, $l_Unwrapped, $l_Pos, $l_SigId)) {
+            $g_CriticalPHP[] = $i;
+            $g_CriticalPHPFragment[] = getFragment($l_Unwrapped, $l_Pos);
+            $g_CriticalPHPSig[] = $l_SigId;
+            $g_SkipNextCheck = true;
+        } else {
+            if (CriticalPHP($l_Filename, $l_Content, $l_Pos, $l_SigId)) {
+                $g_CriticalPHP[] = $i;
+                $g_CriticalPHPFragment[] = getFragment($l_Content, $l_Pos);
+                $g_CriticalPHPSig[] = $l_SigId;
+                $g_SkipNextCheck = true;
+            }
+        }
 
-				// critical JS
-				if (!$g_SkipNextCheck) {
-					$l_Pos = CriticalJS($l_Filename, $i, $l_Unwrapped, $l_SigId);
-					if ($l_Pos !== false)
-					{
-						$g_CriticalJS[] = $i;
-						$g_CriticalJSFragment[] = getFragment($l_Unwrapped, $l_Pos);
-						$g_CriticalJSSig[] = $l_SigId;
-						$g_SkipNextCheck = true;
-					}
-			    }
+        $l_TypeDe = 0;
+        if ((!$g_SkipNextCheck) && HeuristicChecker($l_TypeDe, $l_Filename)) {
+            $g_HeuristicDetected[] = $i;
+            $g_HeuristicType[] = $l_TypeDe;
+            $l_CriticalDetected = true;
+        }
 
-				// phishing
-				if (!$g_SkipNextCheck) {
-					$l_Pos = Phishing($l_Filename, $i, $l_Unwrapped, $l_SigId);
-					if ($l_Pos !== false)
-					{
-						$g_Phishing[] = $i;
-						$g_PhishingFragment[] = getFragment($l_Unwrapped, $l_Pos);
-						$g_PhishingSigFragment[] = $l_SigId;
-						$g_SkipNextCheck = true;
-					}
-				}
+        // critical JS
+        if (!$g_SkipNextCheck) {
+            $l_Pos = CriticalJS($l_Filename, $l_Unwrapped, $l_SigId);
+            if ($l_Pos !== false) {
+                $g_CriticalJS[] = $i;
+                $g_CriticalJSFragment[] = getFragment($l_Unwrapped, $l_Pos);
+                $g_CriticalJSSig[] = $l_SigId;
+                $g_SkipNextCheck = true;
+            }
+        }
 
-			
-			if (!$g_SkipNextCheck) {
-				if (SCAN_ALL_FILES || stripos($l_Filename, 'index.'))
-				{
-					// check iframes
-					if (preg_match_all('|<iframe[^>]+src.+?>|smi', $l_Unwrapped, $l_Found, PREG_SET_ORDER)) 
-					{
-						for ($kk = 0; $kk < count($l_Found); $kk++) {
-						    $l_Pos = stripos($l_Found[$kk][0], 'http://');
-						    $l_Pos = $l_Pos || stripos($l_Found[$kk][0], 'https://');
-						    $l_Pos = $l_Pos || stripos($l_Found[$kk][0], 'ftp://');
-							if  (($l_Pos !== false ) && (!knowUrl($l_Found[$kk][0]))) {
-         						$g_Iframer[] = $i;
-         						$g_IframerFragment[] = getFragment($l_Found[$kk][0], $l_Pos);
-         						$l_CriticalDetected = true;
-							}
-						}
-					}
+        // phishing
+        if (!$g_SkipNextCheck) {
+            $l_Pos = Phishing($l_Filename, $l_Unwrapped, $l_SigId);
+            if ($l_Pos !== false) {
+                $g_Phishing[] = $i;
+                $g_PhishingFragment[] = getFragment($l_Unwrapped, $l_Pos);
+                $g_PhishingSigFragment[] = $l_SigId;
+                $g_SkipNextCheck = true;
+            }
+        }
 
-					// check empty links
-					if ((($defaults['report_mask'] & REPORT_MASK_SPAMLINKS) == REPORT_MASK_SPAMLINKS) &&
-					   (preg_match_all('|<a[^>]+href([^>]+?)>(.*?)</a>|smi', $l_Unwrapped, $l_Found, PREG_SET_ORDER)))
-					{
-						for ($kk = 0; $kk < count($l_Found); $kk++) {
-							if  ((stripos($l_Found[$kk][1], 'http://') !== false) &&
-                                                            (trim(strip_tags($l_Found[$kk][2])) == '')) {
 
-								$l_NeedToAdd = true;
-
-							    if  ((stripos($l_Found[$kk][1], $defaults['site_url']) !== false)
-                                                                 || knowUrl($l_Found[$kk][1])) {
-										$l_NeedToAdd = false;
-								}
-								
-								if ($l_NeedToAdd && (count($g_EmptyLink) < MAX_EXT_LINKS)) {
-									$g_EmptyLink[] = $i;
-									$g_EmptyLinkSrc[$i][] = substr($l_Found[$kk][0], 0, MAX_PREVIEW_LEN);
-									$l_CriticalDetected = true;
-								}
-							}
-						}
-					}
-				}
-
-				// check for PHP code inside any type of file
-				if (stripos($l_Ext, 'ph') === false)
-				{
-					$l_Pos = QCR_SearchPHP($l_Content);
-					if ($l_Pos !== false)
-					{
-						$g_PHPCodeInside[] = $i;
-						$g_PHPCodeInsideFragment[] = getFragment($l_Unwrapped, $l_Pos);
-						$l_CriticalDetected = true;
-					}
-				}
-
-				// htaccess
-				if (stripos($l_Filename, '.htaccess'))
-				{
-				
-					if (stripos($l_Content, 'index.php?name=$1') !== false ||
-						stripos($l_Content, 'index.php?m=1') !== false
-					)
-					{
-						$g_SuspDir[] = $i;
-					}
-
-					$l_HTAContent = preg_replace('|^\s*#.+$|m', '', $l_Content);
-
-					$l_Pos = stripos($l_Content, 'auto_prepend_file');
-					if ($l_Pos !== false) {
-						$g_Redirect[] = $i;
-						$g_RedirectPHPFragment[] = getFragment($l_Content, $l_Pos);
-						$l_CriticalDetected = true;
-					}
-					
-					$l_Pos = stripos($l_Content, 'auto_append_file');
-					if ($l_Pos !== false) {
-						$g_Redirect[] = $i;
-						$g_RedirectPHPFragment[] = getFragment($l_Content, $l_Pos);
-						$l_CriticalDetected = true;
-					}
-
-					$l_Pos = stripos($l_Content, '^(%2d|-)[^=]+$');
-					if ($l_Pos !== false)
-					{
-						$g_Redirect[] = $i;
-                        			$g_RedirectPHPFragment[] = getFragment($l_Content, $l_Pos);
-						$l_CriticalDetected = true;
-					}
-
-					if (!$l_CriticalDetected) {
-						$l_Pos = stripos($l_Content, '%{HTTP_USER_AGENT}');
-						if ($l_Pos !== false)
-						{
-							$g_Redirect[] = $i;
-							$g_RedirectPHPFragment[] = getFragment($l_Content, $l_Pos);
-							$l_CriticalDetected = true;
-						}
-					}
-
-					if (!$l_CriticalDetected) {
-						if (
-							preg_match_all("|RewriteRule\s+.+?\s+http://(.+?)/.+\s+\[.*R=\d+.*\]|smi", $l_HTAContent, $l_Found, PREG_SET_ORDER)
-						)
-						{
-							$l_Host = str_replace('www.', '', $_SERVER['HTTP_HOST']);
-							for ($j = 0; $j < sizeof($l_Found); $j++)
-							{
-								$l_Found[$j][1] = str_replace('www.', '', $l_Found[$j][1]);
-								if ($l_Found[$j][1] != $l_Host)
-								{
-									$g_Redirect[] = $i;
-									$l_CriticalDetected = true;
-									break;
-								}
-							}
-						}
-					}
-
-					unset($l_HTAContent);
-			    }
-			
-
-			    // warnings
-				$l_Pos = '';
-				
-			    if (WarningPHP($l_Filename, $l_Unwrapped, $l_Pos, $l_SigId))
-				{       
-					$l_Prio = 1;
-					if (strpos($l_Filename, '.ph') !== false) {
-					   $l_Prio = 0;
-					}
-					
-					$g_WarningPHP[$l_Prio][] = $i;
-					$g_WarningPHPFragment[$l_Prio][] = getFragment($l_Unwrapped, $l_Pos);
-					$g_WarningPHPSig[] = $l_SigId;
-
-					$l_CriticalDetected = true;
-				}
-				
-
-				// adware
-				if (Adware($l_Filename, $l_Unwrapped, $l_Pos))
-				{
-					$g_AdwareList[] = $i;
-					$g_AdwareListFragment[] = getFragment($l_Unwrapped, $l_Pos);
-					$l_CriticalDetected = true;
-				}
-
-				// articles
-				if (stripos($l_Filename, 'article_index'))
-				{
-					$g_AdwareList[] = $i;
-					$l_CriticalDetected = true;
-				}
-			}
-		} // end of if (!$g_SkipNextCheck) {
-			
-			unset($l_Unwrapped);
-			unset($l_Content);
-			
-			//printProgress(++$_files_and_ignored, $l_Filename);
-
-			$l_TSEndScan = microtime(true);
-                        if ($l_TSEndScan - $l_TSStartScan >= 0.5) {
-			   			   usleep(SCAN_DELAY * 1000);
+        if (!$g_SkipNextCheck) {
+            if (SCAN_ALL_FILES || stripos($l_Filename, 'index.')) {
+                // check iframes
+                if (preg_match_all('|<iframe[^>]+src.+?>|smi', $l_Unwrapped, $l_Found, PREG_SET_ORDER)) {
+                    for ($kk = 0; $kk < count($l_Found); $kk++) {
+                        $l_Pos = stripos($l_Found[$kk][0], 'http://');
+                        $l_Pos = $l_Pos || stripos($l_Found[$kk][0], 'https://');
+                        $l_Pos = $l_Pos || stripos($l_Found[$kk][0], 'ftp://');
+                        if (($l_Pos !== false) && (!knowUrl($l_Found[$kk][0]))) {
+                            $g_Iframer[] = $i;
+                            $g_IframerFragment[] = getFragment($l_Found[$kk][0], $l_Pos);
+                            $l_CriticalDetected = true;
                         }
+                    }
+                }
 
-			if ($g_SkipNextCheck || $l_CriticalDetected) {
-				AddResult($l_Filename, $i);
-			}
+                // check empty links
+                if ((($defaults['report_mask'] & REPORT_MASK_SPAMLINKS) == REPORT_MASK_SPAMLINKS) &&
+                    (preg_match_all('|<a[^>]+href([^>]+?)>(.*?)</a>|smi', $l_Unwrapped, $l_Found, PREG_SET_ORDER))) {
+                    for ($kk = 0; $kk < count($l_Found); $kk++) {
+                        if ((stripos($l_Found[$kk][1], 'http://') !== false) &&
+                            (trim(strip_tags($l_Found[$kk][2])) == '')) {
+
+                            $l_NeedToAdd = true;
+
+                            if ((stripos($l_Found[$kk][1], $defaults['site_url']) !== false)
+                                || knowUrl($l_Found[$kk][1])) {
+                                $l_NeedToAdd = false;
+                            }
+
+                            if ($l_NeedToAdd && (count($g_EmptyLink) < MAX_EXT_LINKS)) {
+                                $g_EmptyLink[] = $i;
+                                $g_EmptyLinkSrc[$i][] = substr($l_Found[$kk][0], 0, MAX_PREVIEW_LEN);
+                                $l_CriticalDetected = true;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // check for PHP code inside any type of file
+            if (stripos($l_Ext, 'ph') === false) {
+                $l_Pos = QCR_SearchPHP($l_Content);
+                if ($l_Pos !== false) {
+                    $g_PHPCodeInside[] = $i;
+                    $g_PHPCodeInsideFragment[] = getFragment($l_Unwrapped, $l_Pos);
+                    $l_CriticalDetected = true;
+                }
+            }
+
+            // htaccess
+            if (stripos($l_Filename, '.htaccess')) {
+
+//                if (stripos($l_Content, 'index.php?name=$1') !== false ||
+//                    stripos($l_Content, 'index.php?m=1') !== false
+//                ) {
+//                    $g_SuspDir[] = $i;
+//                }
+
+                $l_HTAContent = preg_replace('|^\s*#.+$|m', '', $l_Content);
+
+                $l_Pos = stripos($l_Content, 'auto_prepend_file');
+                if ($l_Pos !== false) {
+                    $g_Redirect[] = $i;
+                    $g_RedirectPHPFragment[] = getFragment($l_Content, $l_Pos);
+                    $l_CriticalDetected = true;
+                }
+
+                $l_Pos = stripos($l_Content, 'auto_append_file');
+                if ($l_Pos !== false) {
+                    $g_Redirect[] = $i;
+                    $g_RedirectPHPFragment[] = getFragment($l_Content, $l_Pos);
+                    $l_CriticalDetected = true;
+                }
+
+                $l_Pos = stripos($l_Content, '^(%2d|-)[^=]+$');
+                if ($l_Pos !== false) {
+                    $g_Redirect[] = $i;
+                    $g_RedirectPHPFragment[] = getFragment($l_Content, $l_Pos);
+                    $l_CriticalDetected = true;
+                }
+
+                if (!$l_CriticalDetected) {
+                    $l_Pos = stripos($l_Content, '%{HTTP_USER_AGENT}');
+                    if ($l_Pos !== false) {
+                        $g_Redirect[] = $i;
+                        $g_RedirectPHPFragment[] = getFragment($l_Content, $l_Pos);
+                        $l_CriticalDetected = true;
+                    }
+                }
+
+                if (!$l_CriticalDetected) {
+                    if (
+                        preg_match_all("|RewriteRule\s+.+?\s+http://(.+?)/.+\s+\[.*R=\d+.*]|smi", $l_HTAContent, $l_Found, PREG_SET_ORDER)
+                    ) {
+                        $l_Host = str_replace('www.', '', $_SERVER['HTTP_HOST']);
+                        for ($j = 0; $j < sizeof($l_Found); $j++) {
+                            $l_Found[$j][1] = str_replace('www.', '', $l_Found[$j][1]);
+                            if ($l_Found[$j][1] != $l_Host) {
+                                $g_Redirect[] = $i;
+                                $l_CriticalDetected = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                unset($l_HTAContent);
+            }
+
+
+            // warnings
+            $l_Pos = '';
+
+            if (WarningPHP($l_Unwrapped, $l_Pos, $l_SigId)) {
+                $l_Prio = 1;
+                if (strpos($l_Filename, '.ph') !== false) {
+                    $l_Prio = 0;
+                }
+
+                $g_WarningPHP[$l_Prio][] = $i;
+                $g_WarningPHPFragment[$l_Prio][] = getFragment($l_Unwrapped, $l_Pos);
+                $g_WarningPHPSig[] = $l_SigId;
+
+                $l_CriticalDetected = true;
+            }
+
+
+            // adware
+            if (Adware($l_Unwrapped, $l_Pos)) {
+                $g_AdwareList[] = $i;
+                $g_AdwareListFragment[] = getFragment($l_Unwrapped, $l_Pos);
+                $l_CriticalDetected = true;
+            }
+
+            // articles
+            if (stripos($l_Filename, 'article_index')) {
+                $g_AdwareList[] = $i;
+                $l_CriticalDetected = true;
+            }
+        }
+    } // end of if (!$g_SkipNextCheck) {
+
+    unset($l_Unwrapped);
+    unset($l_Content);
+
+    //printProgress(++$_files_and_ignored, $l_Filename);
+
+    $l_TSEndScan = microtime(true);
+    if ($l_TSEndScan - $l_TSStartScan >= 0.5) {
+        usleep(SCAN_DELAY * 1000);
+    }
+
+    if ($g_SkipNextCheck || $l_CriticalDetected) {
+        AddResult($l_Filename, $i);
+    }
 }
 
 function AddResult($l_Filename, $i)
 {
-	global $g_Structure, $g_CRC;
-	
-	$l_Stat = stat($l_Filename);
-	$g_Structure['n'][$i] = $l_Filename;
-	$g_Structure['s'][$i] = $l_Stat['size'];
-	$g_Structure['c'][$i] = $l_Stat['ctime'];
-	$g_Structure['m'][$i] = $l_Stat['mtime'];
-	$g_Structure['crc'][$i] = $g_CRC;
+    global $g_Structure, $g_CRC;
+
+    $l_Stat = stat($l_Filename);
+    $g_Structure['n'][$i] = $l_Filename;
+    $g_Structure['s'][$i] = $l_Stat['size'];
+    $g_Structure['c'][$i] = $l_Stat['ctime'];
+    $g_Structure['m'][$i] = $l_Stat['mtime'];
+    $g_Structure['crc'][$i] = $g_CRC;
 }
 
-///////////////////////////////////////////////////////////////////////////
-function WarningPHP($l_FN, $l_Content, &$l_Pos, &$l_SigId)
-{
-	   global $g_SusDB,$g_ExceptFlex, $gXX_FlexDBShe, $gX_FlexDBShe, $g_FlexDBShe, $gX_DBShe, $g_DBShe, $g_Base64, $g_Base64Fragment;
 
-  $l_Res = false;
+function WarningPHP($l_Content, &$l_Pos, &$l_SigId): bool {
+    global $g_SusDB, $gXX_FlexDBShe, $gX_FlexDBShe, $gX_DBShe;
 
-  if (AI_EXTRA_WARN) {
-  	foreach ($g_SusDB as $l_Item) {
-    	if (preg_match('#(' . $l_Item . ')#smiS', $l_Content, $l_Found, PREG_OFFSET_CAPTURE)) {
-       	 	if (!CheckException($l_Content, $l_Found)) {
-           	 	$l_Pos = $l_Found[0][1];
-           	 	//$l_SigId = myCheckSum($l_Item);
-           	 	$l_SigId = getSigId($l_Found);
-           	 	return true;
-       	 	}
-    	}
-  	}
-  }
+    $l_Res = false;
 
-  if (AI_EXPERT < 2) {
-    	foreach ($gXX_FlexDBShe as $l_Item) {
-      		if (preg_match('#(' . $l_Item . ')#smiS', $l_Content, $l_Found, PREG_OFFSET_CAPTURE)) {
-             	$l_Pos = $l_Found[0][1];
-           	    //$l_SigId = myCheckSum($l_Item);
-           	    $l_SigId = getSigId($l_Found);
-        	    return true;
-	  		}
-    	}
-
-	}
-
-    if (AI_EXPERT < 1) {
-    	foreach ($gX_FlexDBShe as $l_Item) {
-      		if (preg_match('#(' . $l_Item . ')#smiS', $l_Content, $l_Found, PREG_OFFSET_CAPTURE)) {
-             	$l_Pos = $l_Found[0][1];
-           	 	//$l_SigId = myCheckSum($l_Item);
-           	 	$l_SigId = getSigId($l_Found);
-        	    return true;
-	  		}
-    	}
-
-	    $l_Content_lo = strtolower($l_Content);
-
-	    foreach ($gX_DBShe as $l_Item) {
-	      $l_Pos = strpos($l_Content_lo, $l_Item);
-	      if ($l_Pos !== false) {
-	         $l_SigId = myCheckSum($l_Item);
-	         return true;
-	      }
-		}
-	}
-
-}
-
-///////////////////////////////////////////////////////////////////////////
-function Adware($l_FN, $l_Content, &$l_Pos)
-{
-  global $g_AdwareSig;
-
-  $l_Res = false;
-
-foreach ($g_AdwareSig as $l_Item) {
-    $offset = 0;
-    while (preg_match('#(' . $l_Item . ')#smi', $l_Content, $l_Found, PREG_OFFSET_CAPTURE, $offset)) {
-       if (!CheckException($l_Content, $l_Found)) {
-           $l_Pos = $l_Found[0][1];
-           return true;
-       }
-
-       $offset = $l_Found[0][1] + 1;
+    if (AI_EXTRA_WARN) {
+        foreach ($g_SusDB as $list_Item) {
+            if (preg_match('#(' . $list_Item . ')#smiS', $l_Content, $l_Found, PREG_OFFSET_CAPTURE)) {
+                if (!CheckException($l_Content, $l_Found)) {
+                    $l_Pos = $l_Found[0][1];
+                    //$l_SigId = myCheckSum($list_Item);
+                    $l_SigId = getSigId($l_Found);
+                    return true;
+                }
+            }
+        }
     }
-  }
 
-  return $l_Res;
-}
-
-///////////////////////////////////////////////////////////////////////////
-function CheckException(&$l_Content, &$l_Found) {
-  global $g_ExceptFlex, $gX_FlexDBShe, $gXX_FlexDBShe, $g_FlexDBShe, $gX_DBShe, $g_DBShe, $g_Base64, $g_Base64Fragment;
-   $l_FoundStrPlus = substr($l_Content, max($l_Found[0][1] - 10, 0), 70);
-
-   foreach ($g_ExceptFlex as $l_ExceptItem) {
-      if (@preg_match('#(' . $l_ExceptItem . ')#smi', $l_FoundStrPlus, $l_Detected)) {
-//         print("\n\nEXCEPTION FOUND\n[" . $l_ExceptItem .  "]\n" . $l_Content . "\n\n----------\n\n");
-         return true;
-      }
-   }
-
-   return false;
-}
-
-///////////////////////////////////////////////////////////////////////////
-function Phishing($l_FN, $l_Index, $l_Content, &$l_SigId)
-{
-  global $g_PhishingSig, $g_PhishFiles, $g_PhishEntries;
-
-  $l_Res = false;
-
-  // need check file (by extension) ?
-  $l_SkipCheck = SMART_SCAN;
-
-if ($l_SkipCheck) {
-  	foreach($g_PhishFiles as $l_Ext) {
-  		  if (strpos($l_FN, $l_Ext) !== false) {
-		  			$l_SkipCheck = false;
-		  		  	break;
-  	  	  }
-  	  }
-  }
-
-  // need check file (by signatures) ?
-  if ($l_SkipCheck && preg_match('~' . $g_PhishEntries . '~smiS', $l_Content, $l_Found)) {
-	  $l_SkipCheck = false;
-  }
-
-  if ($l_SkipCheck && SMART_SCAN) {
-      if (DEBUG_MODE) {
-         echo "Skipped phs file, not critical.\n";
-      }
-
-	  return false;
-  }
-
-
-  foreach ($g_PhishingSig as $l_Item) {
-    $offset = 0;
-    while (preg_match('#(' . $l_Item . ')#smi', $l_Content, $l_Found, PREG_OFFSET_CAPTURE, $offset)) {
-       if (!CheckException($l_Content, $l_Found)) {
-           $l_Pos = $l_Found[0][1];
-//           $l_SigId = myCheckSum($l_Item);
-           $l_SigId = getSigId($l_Found);
-
-           if (DEBUG_MODE) {
-              echo "Phis: $l_FN matched [$l_Item] in $l_Pos\n";
-           }
-
-           return $l_Pos;
-       }
-       $offset = $l_Found[0][1] + 1;
-
-    }
-  }
-
-  return $l_Res;
-}
-
-///////////////////////////////////////////////////////////////////////////
-function CriticalJS($l_FN, $l_Index, $l_Content, &$l_SigId)
-{
-  global $g_JSVirSig, $gX_JSVirSig, $g_VirusFiles, $g_VirusEntries;
-
-  $l_Res = false;
-  
-    // need check file (by extension) ?
-    $l_SkipCheck = SMART_SCAN;
-	
-	if ($l_SkipCheck) {
-    	foreach($g_VirusFiles as $l_Ext) {
-    		  if (strpos($l_FN, $l_Ext) !== false) {
-  		  			$l_SkipCheck = false;
-  		  		  	break;
-    	  	  }
-    	  }
-	  }
-  
-    // need check file (by signatures) ?
-    if ($l_SkipCheck && preg_match('~' . $g_VirusEntries . '~smiS', $l_Content, $l_Found)) {
-  	  $l_SkipCheck = false;
-    }
-  
-    if ($l_SkipCheck && SMART_SCAN) {
-        if (DEBUG_MODE) {
-           echo "Skipped js file, not critical.\n";
+    if (AI_EXPERT < 2) {
+        foreach ($gXX_FlexDBShe as $list_Item) {
+            if (preg_match('#(' . $list_Item . ')#smiS', $l_Content, $l_Found, PREG_OFFSET_CAPTURE)) {
+                $l_Pos = $l_Found[0][1];
+                //$l_SigId = myCheckSum($list_Item);
+                $l_SigId = getSigId($l_Found);
+                return true;
+            }
         }
 
-  	  return false;
-    }
-  
-
-  foreach ($g_JSVirSig as $l_Item) {
-    $offset = 0;
-    while (preg_match('#(' . $l_Item . ')#smi', $l_Content, $l_Found, PREG_OFFSET_CAPTURE, $offset)) {
-       if (!CheckException($l_Content, $l_Found)) {
-           $l_Pos = $l_Found[0][1];
-//           $l_SigId = myCheckSum($l_Item);
-           $l_SigId = getSigId($l_Found);
-
-           if (DEBUG_MODE) {
-              echo "JS: $l_FN matched [$l_Item] in $l_Pos\n";
-           }
-
-           return $l_Pos;
-       }
-
-       $offset = $l_Found[0][1] + 1;
-
     }
 
-//   if (pcre_error($l_FN, $l_Index)) {  }
+    if (AI_EXPERT < 1) {
+        foreach ($gX_FlexDBShe as $list_Item) {
+            if (preg_match('#(' . $list_Item . ')#smiS', $l_Content, $l_Found, PREG_OFFSET_CAPTURE)) {
+                $l_Pos = $l_Found[0][1];
+                //$l_SigId = myCheckSum($list_Item);
+                $l_SigId = getSigId($l_Found);
+                return true;
+            }
+        }
 
-  }
+        $l_Content_lo = strtolower($l_Content);
 
-if (AI_EXPERT > 1) {
-  foreach ($gX_JSVirSig as $l_Item) {
-    if (preg_match('#(' . $l_Item . ')#smi', $l_Content, $l_Found, PREG_OFFSET_CAPTURE)) {
-       if (!CheckException($l_Content, $l_Found)) {
-           $l_Pos = $l_Found[0][1];
-           //$l_SigId = myCheckSum($l_Item);
-           $l_SigId = getSigId($l_Found);
-
-           if (DEBUG_MODE) {
-              echo "JS PARA: $l_FN matched [$l_Item] in $l_Pos\n";
-           }
-
-           return $l_Pos;
-       }
+        foreach ($gX_DBShe as $list_Item) {
+            $l_Pos = strpos($l_Content_lo, $list_Item);
+            if ($l_Pos !== false) {
+                $l_SigId = myCheckSum($list_Item);
+                return true;
+            }
+        }
     }
-
-//   if (pcre_error($l_FN, $l_Index)) {  }
-
-  }
-}
-
-  return $l_Res;
-}
-
-////////////////////////////////////////////////////////////////////////////
-function pcre_error($par_FN, $par_Index) {
-   global $g_NotRead, $g_Structure;
-
-   $err = preg_last_error();
-   if (($err == PREG_BACKTRACK_LIMIT_ERROR) || ($err == PREG_RECURSION_LIMIT_ERROR)) {
-      if (!in_array($par_Index, $g_NotRead)) {
-         $g_NotRead[] = $par_Index;
-         AddResult('[re] ' . $par_FN, $par_Index);
-      }
- 
-      return true;
-   }
-
-   return false;
+    return $l_Res;
 }
 
 
+function Adware($l_Content, &$l_Pos): bool {
+    global $g_AdwareSig;
 
-////////////////////////////////////////////////////////////////////////////
-define('SUSP_MTIME', 1); // suspicious mtime (greater than ctime)
-define('SUSP_PERM', 2); // suspicious permissions 
-define('SUSP_PHP_IN_UPLOAD', 3); // suspicious .php file in upload or image folder 
+    $l_Res = false;
 
-  function get_descr_heur($type) {
-     switch ($type) {
-	     case SUSP_MTIME: return AI_STR_077; 
-	     case SUSP_PERM: return AI_STR_078;  
-	     case SUSP_PHP_IN_UPLOAD: return AI_STR_079; 
-	 }
-	 
-	 return "---";
-  }
+    foreach ($g_AdwareSig as $list_Item) {
+        $offset = 0;
+        while (preg_match('#(' . $list_Item . ')#smi', $l_Content, $l_Found, PREG_OFFSET_CAPTURE, $offset)) {
+            if (!CheckException($l_Content, $l_Found)) {
+                $l_Pos = $l_Found[0][1];
+                return true;
+            }
 
-  ///////////////////////////////////////////////////////////////////////////
-  function HeuristicChecker($l_Content, &$l_Type, $l_Filename) {
-     $res = false;
-	 
-	 $l_Stat = stat($l_Filename);
-	 // most likely changed by touch
-	 if ($l_Stat['ctime'] < $l_Stat['mtime']) {
-	     $l_Type = SUSP_MTIME;
-		 return true;
-	 }
+            $offset = $l_Found[0][1] + 1;
+        }
+    }
 
-	 	 
-	 $l_Perm = fileperms($l_Filename) & 0777;
-	 if (($l_Perm & 0400 != 0400) || // not readable by owner
-		($l_Perm == 0000) ||
-		($l_Perm == 0404) ||
-		($l_Perm == 0505))
-	 {
-		 $l_Type = SUSP_PERM;
-		 return true;
-	 }
+    return $l_Res;
+}
 
-	 
-     if ((strpos($l_Filename, '.ph')) && (
-	     strpos($l_Filename, '/images/stories/') ||
-	     //strpos($l_Filename, '/img/') ||
-		 //strpos($l_Filename, '/images/') ||
-	     //strpos($l_Filename, '/uploads/') ||
-		 strpos($l_Filename, '/wp-content/upload/') 
-	    )	    
-	 ) {
-		$l_Type = SUSP_PHP_IN_UPLOAD;
-	 	return true;
-	 }
 
-     return false;
-  }
+function CheckException($l_Content, $l_Found): bool {
+    global $g_ExceptFlex;
+    $l_FoundStrPlus = substr($l_Content, max($l_Found[0][1] - 10, 0), 70);
 
-///////////////////////////////////////////////////////////////////////////
-function CriticalPHP($l_FN, $l_Index, $l_Content, &$l_Pos, &$l_SigId)
+    foreach ($g_ExceptFlex as $l_ExceptItem) {
+        if (@preg_match('#(' . $l_ExceptItem . ')#smi', $l_FoundStrPlus, $l_Detected)) {
+//         print("\n\nEXCEPTION FOUND\n[" . $l_ExceptItem .  "]\n" . $l_Content . "\n\n----------\n\n");
+            return true;
+        }
+    }
+
+    return false;
+}
+
+
+function Phishing($l_FN, $l_Content, &$l_SigId)
 {
+    global $g_PhishingSig, $g_PhishFiles, $g_PhishEntries;
 
-  global $g_ExceptFlex, $gXX_FlexDBShe, $gX_FlexDBShe, $g_FlexDBShe, $gX_DBShe, $g_DBShe, $g_Base64, $g_Base64Fragment,
-  $g_CriticalFiles, $g_CriticalEntries;
+    $l_Res = false;
 
-  // @@AIBOLIT_SIG_000000000000@@ H24LKHGHCGHFHGKJHGKJHGGGHJ
+    // need check file (by extension) ?
+    $l_SkipCheck = SMART_SCAN;
 
-  // need check file (by extension) ?
-  $l_SkipCheck = SMART_SCAN;
+    if ($l_SkipCheck) {
+        foreach ($g_PhishFiles as $l_Ext) {
+            if (strpos($l_FN, $l_Ext) !== false) {
+                $l_SkipCheck = false;
+                break;
+            }
+        }
+    }
 
-  if ($l_SkipCheck) {
-	  foreach($g_CriticalFiles as $l_Ext) {
-  	  	if (strpos($l_FN, $l_Ext) !== false) {
-			  $l_SkipCheck = false;
-		  	break;
-  	  		}
-  		}
-	}
-  
-  // need check file (by signatures) ?
-  if ($l_SkipCheck && preg_match('~' . $g_CriticalEntries . '~smiS', $l_Content, $l_Found)) {
-	  $l_SkipCheck = false;
-  }
-  
-  
-  // if not critical - skip it 
-  if ($l_SkipCheck && SMART_SCAN) {
-      if (DEBUG_MODE) {
-         echo "Skipped file, not critical.\n";
+    // need check file (by signatures) ?
+    if ($l_SkipCheck && preg_match('~' . $g_PhishEntries . '~smiS', $l_Content, $l_Found)) {
+        $l_SkipCheck = false;
+    }
+
+    if ($l_SkipCheck && SMART_SCAN) {
+        if (DEBUG_MODE) {
+            echo "Skipped phs file, not critical.\n";
+        }
+
+        return false;
+    }
+
+
+    foreach ($g_PhishingSig as $list_Item) {
+        $offset = 0;
+        while (preg_match('#(' . $list_Item . ')#smi', $l_Content, $l_Found, PREG_OFFSET_CAPTURE, $offset)) {
+            if (!CheckException($l_Content, $l_Found)) {
+                $l_Pos = $l_Found[0][1];
+//           $l_SigId = myCheckSum($list_Item);
+                $l_SigId = getSigId($l_Found);
+
+                if (DEBUG_MODE) {
+                    echo "Phis: $l_FN matched [$list_Item] in $l_Pos\n";
+                }
+
+                return $l_Pos;
+            }
+            $offset = $l_Found[0][1] + 1;
+
+        }
+    }
+
+    return $l_Res;
+}
+
+
+function CriticalJS($l_FN, $l_Content, &$l_SigId)
+{
+    global $g_JSVirSig, $gX_JSVirSig, $g_VirusFiles, $g_VirusEntries;
+
+    $l_Res = false;
+
+    // need check file (by extension) ?
+    $l_SkipCheck = SMART_SCAN;
+
+    if ($l_SkipCheck) {
+        foreach ($g_VirusFiles as $l_Ext) {
+            if (strpos($l_FN, $l_Ext) !== false) {
+                $l_SkipCheck = false;
+                break;
+            }
+        }
+    }
+
+    // need check file (by signatures) ?
+    if ($l_SkipCheck && preg_match('~' . $g_VirusEntries . '~smiS', $l_Content, $l_Found)) {
+        $l_SkipCheck = false;
+    }
+
+    if ($l_SkipCheck && SMART_SCAN) {
+        if (DEBUG_MODE) {
+            echo "Skipped js file, not critical.\n";
+        }
+
+        return false;
+    }
+
+
+    foreach ($g_JSVirSig as $list_Item) {
+        $offset = 0;
+        while (preg_match('#(' . $list_Item . ')#smi', $l_Content, $l_Found, PREG_OFFSET_CAPTURE, $offset)) {
+            if (!CheckException($l_Content, $l_Found)) {
+                $l_Pos = $l_Found[0][1];
+//           $l_SigId = myCheckSum($list_Item);
+                $l_SigId = getSigId($l_Found);
+
+                if (DEBUG_MODE) {
+                    echo "JS: $l_FN matched [$list_Item] in $l_Pos\n";
+                }
+
+                return $l_Pos;
+            }
+
+            $offset = $l_Found[0][1] + 1;
+
+        }
+
+//   if (pcre_error($l_FN, $l_Index)) {  }
+
+    }
+
+    if (AI_EXPERT > 1) {
+        foreach ($gX_JSVirSig as $list_Item) {
+            if (preg_match('#(' . $list_Item . ')#smi', $l_Content, $l_Found, PREG_OFFSET_CAPTURE)) {
+                if (!CheckException($l_Content, $l_Found)) {
+                    $l_Pos = $l_Found[0][1];
+                    //$l_SigId = myCheckSum($list_Item);
+                    $l_SigId = getSigId($l_Found);
+
+                    if (DEBUG_MODE) {
+                        echo "JS PARA: $l_FN matched [$list_Item] in $l_Pos\n";
+                    }
+
+                    return $l_Pos;
+                }
+            }
+
+//   if (pcre_error($l_FN, $l_Index)) {  }
+
+        }
+    }
+
+    return $l_Res;
+}
+
+
+//function pcre_error($par_FN, $par_Index): bool {
+//    global $g_NotRead;
+//
+//    $err = preg_last_error();
+//    if (($err == PREG_BACKTRACK_LIMIT_ERROR) || ($err == PREG_RECURSION_LIMIT_ERROR)) {
+//        if (!in_array($par_Index, $g_NotRead)) {
+//            $g_NotRead[] = $par_Index;
+//            AddResult('[re] ' . $par_FN, $par_Index);
+//        }
+//
+//        return true;
+//    }
+//
+//    return false;
+//}
+
+
+const SUSP_MTIME = 1; // suspicious mtime (greater than ctime)
+const SUSP_PERM = 2; // suspicious permissions
+const SUSP_PHP_IN_UPLOAD = 3; // suspicious .php file in upload or image folder
+
+function get_descr_heur($type): string {
+    switch ($type) {
+        case SUSP_MTIME:
+            return AI_STR_077;
+        case SUSP_PERM:
+            return AI_STR_078;
+        case SUSP_PHP_IN_UPLOAD:
+            return AI_STR_079;
+    }
+
+    return "---";
+}
+
+
+function HeuristicChecker(&$l_Type, $l_Filename): bool {
+    global $res;
+    $res = false;
+
+    $l_Stat = stat($l_Filename);
+    // most likely changed by touch
+    if ($l_Stat['ctime'] < $l_Stat['mtime']) {
+        $l_Type = SUSP_MTIME;
+        return true;
+    }
+
+
+    $l_Perm = fileperms($l_Filename) & 0777;
+    if (($l_Perm & 0400 != 0400) || // not readable by owner
+        ($l_Perm == 0000) ||
+        ($l_Perm == 0404) ||
+        ($l_Perm == 0505)) {
+        $l_Type = SUSP_PERM;
+        return true;
+    }
+
+
+    if ((strpos($l_Filename, '.ph')) && (
+            strpos($l_Filename, '/images/stories/') ||
+            //strpos($l_Filename, '/img/') ||
+            //strpos($l_Filename, '/images/') ||
+            //strpos($l_Filename, '/uploads/') ||
+            strpos($l_Filename, '/wp-content/upload/')
+        )
+    ) {
+        $l_Type = SUSP_PHP_IN_UPLOAD;
+        return true;
+    }
+
+    return false;
+}
+
+
+function CriticalPHP($l_FN, $l_Content, &$l_Pos, &$l_SigId): bool {
+
+    global $gXX_FlexDBShe, $gX_FlexDBShe, $g_FlexDBShe, $gX_DBShe, $g_DBShe, $g_CriticalFiles, $g_CriticalEntries;
+
+    // @@AIBOLIT_SIG_000000000000@@ H24LKHGHCGHFHGKJHGKJHGGGHJ
+
+    // need check file (by extension) ?
+    $l_SkipCheck = SMART_SCAN;
+
+    if ($l_SkipCheck) {
+        foreach ($g_CriticalFiles as $l_Ext) {
+            if (strpos($l_FN, $l_Ext) !== false) {
+                $l_SkipCheck = false;
+                break;
+            }
+        }
+    }
+
+    // need check file (by signatures) ?
+    if ($l_SkipCheck && preg_match('~' . $g_CriticalEntries . '~smiS', $l_Content, $l_Found)) {
+        $l_SkipCheck = false;
+    }
+
+
+    // if not critical - skip it
+    if ($l_SkipCheck && SMART_SCAN) {
+        if (DEBUG_MODE) {
+            echo "Skipped file, not critical.\n";
+        }
+
+        return false;
+    }
+
+    /*
+      if (AI_EXPERT > 1) {
+        if (strpos($l_FN, '.php.') !== false ) {
+           $g_Base64[] = $l_Index;
+           $g_Base64Fragment[] = '".php."';
+           $l_Pos = 0;
+
+           if (DEBUG_MODE) {
+                echo "CRIT 7: $l_FN matched [$list_Item] in $l_Pos\n";
+           }
+
+           AddResult($l_FN, $l_Index);
+        }
       }
+    */
 
-	  return false;
-  }
+    foreach ($g_FlexDBShe as $list_Item) {
+        $offset = 0;
+        while (preg_match('#(' . $list_Item . ')#smiS', $l_Content, $l_Found, PREG_OFFSET_CAPTURE, $offset)) {
+            if (!CheckException($l_Content, $l_Found)) {
+                $l_Pos = $l_Found[0][1];
+                //$l_SigId = myCheckSum($list_Item);
+                $l_SigId = getSigId($l_Found);
 
-/*
-  if (AI_EXPERT > 1) {
-    if (strpos($l_FN, '.php.') !== false ) {
-       $g_Base64[] = $l_Index;
-       $g_Base64Fragment[] = '".php."';
-       $l_Pos = 0;
+                if (DEBUG_MODE) {
+                    echo "CRIT 1: $l_FN matched [$list_Item] in $l_Pos\n";
+                }
 
-       if (DEBUG_MODE) {
-            echo "CRIT 7: $l_FN matched [$l_Item] in $l_Pos\n";
-       }
+                return true;
+            }
 
-       AddResult($l_FN, $l_Index);
-    }
-  }
-*/
- 
-  foreach ($g_FlexDBShe as $l_Item) {
-    $offset = 0;
-    while (preg_match('#(' . $l_Item . ')#smiS', $l_Content, $l_Found, PREG_OFFSET_CAPTURE, $offset)) {
-       if (!CheckException($l_Content, $l_Found)) {
-           $l_Pos = $l_Found[0][1];
-           //$l_SigId = myCheckSum($l_Item);
-           $l_SigId = getSigId($l_Found);
+            $offset = $l_Found[0][1] + 1;
 
-           if (DEBUG_MODE) {
-              echo "CRIT 1: $l_FN matched [$l_Item] in $l_Pos\n";
-           }
-
-           return true;
-       }
-
-       $offset = $l_Found[0][1] + 1;
-
-    }
+        }
 
 //   if (pcre_error($l_FN, $l_Index)) {  }
 
-  }
-
-if (AI_EXPERT > 1) {
-  foreach ($gXX_FlexDBShe as $l_Item) {
-    if (preg_match('#(' . $l_Item . ')#smiS', $l_Content, $l_Found, PREG_OFFSET_CAPTURE)) {
-       if (!CheckException($l_Content, $l_Found)) {
-           $l_Pos = $l_Found[0][1];
-           //$l_SigId = myCheckSum($l_Item);
-           $l_SigId = getSigId($l_Found);
-
-           if (DEBUG_MODE) {
-              echo "CRIT 2: $l_FN matched [$l_Item] in $l_Pos\n";
-           }
-
-           return true;
-       }
     }
+
+    if (AI_EXPERT > 1) {
+        foreach ($gXX_FlexDBShe as $list_Item) {
+            if (preg_match('#(' . $list_Item . ')#smiS', $l_Content, $l_Found, PREG_OFFSET_CAPTURE)) {
+                if (!CheckException($l_Content, $l_Found)) {
+                    $l_Pos = $l_Found[0][1];
+                    //$l_SigId = myCheckSum($list_Item);
+                    $l_SigId = getSigId($l_Found);
+
+                    if (DEBUG_MODE) {
+                        echo "CRIT 2: $l_FN matched [$list_Item] in $l_Pos\n";
+                    }
+
+                    return true;
+                }
+            }
 
 //   if (pcre_error($l_FN, $l_Index)) {  }
-  }
-}
-
-if (AI_EXPERT > 0) {
-  foreach ($gX_FlexDBShe as $l_Item) {
-    if (preg_match('#(' . $l_Item . ')#smiS', $l_Content, $l_Found, PREG_OFFSET_CAPTURE)) {
-       if (!CheckException($l_Content, $l_Found)) {
-           $l_Pos = $l_Found[0][1];
-           //$l_SigId = myCheckSum($l_Item);
-           $l_SigId = getSigId($l_Found);
-
-           if (DEBUG_MODE) {
-              echo "CRIT 3: $l_FN matched [$l_Item] in $l_Pos\n";
-           }
-
-           return true;
-       }
+        }
     }
+
+    if (AI_EXPERT > 0) {
+        foreach ($gX_FlexDBShe as $list_Item) {
+            if (preg_match('#(' . $list_Item . ')#smiS', $l_Content, $l_Found, PREG_OFFSET_CAPTURE)) {
+                if (!CheckException($l_Content, $l_Found)) {
+                    $l_Pos = $l_Found[0][1];
+                    //$l_SigId = myCheckSum($list_Item);
+                    $l_SigId = getSigId($l_Found);
+
+                    if (DEBUG_MODE) {
+                        echo "CRIT 3: $l_FN matched [$list_Item] in $l_Pos\n";
+                    }
+
+                    return true;
+                }
+            }
 
 //   if (pcre_error($l_FN, $l_Index)) {  }
-  }
-}
-
-  $l_Content_lo = strtolower($l_Content);
-
-  foreach ($g_DBShe as $l_Item) {
-    $l_Pos = strpos($l_Content_lo, $l_Item);
-    if ($l_Pos !== false) {
-       $l_SigId = myCheckSum($l_Item);
-
-       if (DEBUG_MODE) {
-          echo "CRIT 4: $l_FN matched [$l_Item] in $l_Pos\n";
-       }
-
-       return true;
+        }
     }
-  }
 
-if (AI_EXPERT > 0) {
-  foreach ($gX_DBShe as $l_Item) {
-    $l_Pos = strpos($l_Content_lo, $l_Item);
-    if ($l_Pos !== false) {
-       $l_SigId = myCheckSum($l_Item);
+    $l_Content_lo = strtolower($l_Content);
 
-       if (DEBUG_MODE) {
-          echo "CRIT 5: $l_FN matched [$l_Item] in $l_Pos\n";
-       }
+    foreach ($g_DBShe as $list_Item) {
+        $l_Pos = strpos($l_Content_lo, $list_Item);
+        if ($l_Pos !== false) {
+            $l_SigId = myCheckSum($list_Item);
 
-       return true;
+            if (DEBUG_MODE) {
+                echo "CRIT 4: $l_FN matched [$list_Item] in $l_Pos\n";
+            }
+
+            return true;
+        }
     }
-  }
+
+    if (AI_EXPERT > 0) {
+        foreach ($gX_DBShe as $list_Item) {
+            $l_Pos = strpos($l_Content_lo, $list_Item);
+            if ($l_Pos !== false) {
+                $l_SigId = myCheckSum($list_Item);
+
+                if (DEBUG_MODE) {
+                    echo "CRIT 5: $l_FN matched [$list_Item] in $l_Pos\n";
+                }
+
+                return true;
+            }
+        }
+    }
+
+    if (AI_EXPERT > 0) {
+        if ((strpos($l_Content, 'GIF89') === 0) && (strpos($l_FN, '.php') !== false)) {
+            $l_Pos = 0;
+
+            if (DEBUG_MODE) {
+                echo "CRIT 6: $l_FN matched [$list_Item] in $l_Pos\n";
+            }
+
+            return true;
+        }
+    }
+
+    // detect uploaders / droppers
+    if (AI_EXPERT > 1) {
+        $l_Found = null;
+        if (
+            (filesize($l_FN) < 1024) &&
+            (strpos($l_FN, '.ph') !== false) &&
+            (
+                (($l_Pos = strpos($l_Content, 'multipart/form-data')) > 0) ||
+                (($l_Pos = strpos($l_Content, '$_FILE[') > 0)) ||
+                (($l_Pos = strpos($l_Content, 'move_uploaded_file')) > 0) ||
+                (preg_match('|\bcopy\s*\(|smi', $l_Content, $l_Found, PREG_OFFSET_CAPTURE))
+            )
+        ) {
+            if ($l_Found != null) {
+                $l_Pos = $l_Found[0][1];
+            }
+            if (DEBUG_MODE) {
+                echo "CRIT 7: $l_FN matched [$list_Item] in $l_Pos\n";
+            }
+
+            return true;
+        }
+    }
+
+    return false;
 }
 
-if (AI_EXPERT > 0) {
-  if ((strpos($l_Content, 'GIF89') === 0) && (strpos($l_FN, '.php') !== false )) {
-     $l_Pos = 0;
-
-     if (DEBUG_MODE) {
-          echo "CRIT 6: $l_FN matched [$l_Item] in $l_Pos\n";
-     }
-
-     return true;
-  }
-}
-
-  // detect uploaders / droppers
-if (AI_EXPERT > 1) {
-  $l_Found = null;
-  if (
-     (filesize($l_FN) < 1024) &&
-     (strpos($l_FN, '.ph') !== false) &&
-     (
-       (($l_Pos = strpos($l_Content, 'multipart/form-data')) > 0) || 
-       (($l_Pos = strpos($l_Content, '$_FILE[') > 0)) ||
-       (($l_Pos = strpos($l_Content, 'move_uploaded_file')) > 0) ||
-       (preg_match('|\bcopy\s*\(|smi', $l_Content, $l_Found, PREG_OFFSET_CAPTURE))
-     )
-     ) {
-       if ($l_Found != null) {
-          $l_Pos = $l_Found[0][1];
-       } 
-     if (DEBUG_MODE) {
-          echo "CRIT 7: $l_FN matched [$l_Item] in $l_Pos\n";
-     }
-
-     return true;
-  }
-}
-
-  return false;
-}
-
-///////////////////////////////////////////////////////////////////////////
 if (!isCli()) {
-   header('Content-type: text/html; charset=utf-8');
+    header('Content-type: text/html; charset=utf-8');
 }
 
 if (!isCli()) {
 
-  $l_PassOK = false;
-  if (strlen(PASS) > 8) {
-     $l_PassOK = true;   
-  } 
+    $l_PassOK = false;
+    if (strlen(PASS) > 8) {
+        $l_PassOK = true;
+    }
 
-  if ($l_PassOK && preg_match('|[0-9]|', PASS, $l_Found) && preg_match('|[A-Z]|', PASS, $l_Found) && preg_match('|[a-z]|', PASS, $l_Found) ) {
-     $l_PassOK = true;   
-  }
-  
-  if (!$l_PassOK) {  
-    echo sprintf(AI_STR_009, generatePassword());
-    exit;
-  }
+    if ($l_PassOK && preg_match('|[0-9]|', PASS, $l_Found) && preg_match('|[A-Z]|', PASS, $l_Found) && preg_match('|[a-z]|', PASS, $l_Found)) {
+        $l_PassOK = true;
+    }
 
-  if (isset($_GET['fn']) && ($_GET['ph'] == crc32(PASS))) {
-     printFile();
-     exit;
-  }
+    if (!$l_PassOK) {
+        echo sprintf(AI_STR_009, generatePassword());
+        exit;
+    }
 
-  if ($_GET['p'] != PASS) {
-    $generated_pass = generatePassword(); 
-    echo sprintf(AI_STR_010, $generated_pass, $generated_pass);
-    exit;
-  }
+    if (isset($_GET['fn']) && ($_GET['ph'] == crc32(PASS))) {
+        printFile();
+        exit;
+    }
+
+    if ($_GET['p'] != PASS) {
+        $generated_pass = generatePassword();
+        echo sprintf(AI_STR_010, $generated_pass, $generated_pass);
+        exit;
+    }
 }
 
 if (!is_readable(ROOT_PATH)) {
-  echo AI_STR_011;
-  exit;
+    echo AI_STR_011;
+    exit;
 }
 
 if (isCli()) {
-	if (defined('REPORT_PATH') AND REPORT_PATH)
-	{
-		if (!is_writable(REPORT_PATH))
-		{
-			die("\nCannot write report. Report dir " . REPORT_PATH . " is not writable.");
-		}
-
-		else if (!REPORT_FILE)
-		{
-			die("\nCannot write report. Report filename is empty.");
-		}
-
-		else if (($file = REPORT_PATH . DIR_SEPARATOR . REPORT_FILE) AND is_file($file) AND !is_writable($file))
-		{
-			die("\nCannot write report. Report file '$file' exists but is not writable.");
-		}
-	}
+    if (defined('REPORT_PATH') and REPORT_PATH) {
+        if (!is_writable(REPORT_PATH)) {
+            die("\nCannot write report. Report dir " . REPORT_PATH . " is not writable.");
+        } else if (!REPORT_FILE) {
+            die("\nCannot write report. Report filename is empty.");
+        } else if (($file = REPORT_PATH . DIR_SEPARATOR . REPORT_FILE) and is_file($file) and !is_writable($file)) {
+            die("\nCannot write report. Report file '$file' exists but is not writable.");
+        }
+    }
 }
 
 
@@ -3605,26 +2957,26 @@ for ($tt = 0; $tt < $l_CmsDetectedNum; $tt++) {
 }
 
 if (count($tmp_cms) > 0) {
-   $g_KnownCMS = array_keys($tmp_cms);
-   $len = count($g_KnownCMS);
-   for ($i = 0; $i < $len; $i++) {
-      if ($g_KnownCMS[$i] == strtolower(CMS_WORDPRESS)) $g_KnownCMS[] = 'wp';
-      if ($g_KnownCMS[$i] == strtolower(CMS_WEBASYST)) $g_KnownCMS[] = 'shopscript';
-      if ($g_KnownCMS[$i] == strtolower(CMS_IPB)) $g_KnownCMS[] = 'ipb';
-      if ($g_KnownCMS[$i] == strtolower(CMS_DLE)) $g_KnownCMS[] = 'dle';
-      if ($g_KnownCMS[$i] == strtolower(CMS_INSTANTCMS)) $g_KnownCMS[] = 'instantcms';
-      if ($g_KnownCMS[$i] == strtolower(CMS_SHOPSCRIPT)) $g_KnownCMS[] = 'shopscript';
-   }
+    $g_KnownCMS = array_keys($tmp_cms);
+    $len = count($g_KnownCMS);
+    for ($i = 0; $i < $len; $i++) {
+        if ($g_KnownCMS[$i] == strtolower(CMS_WORDPRESS)) $g_KnownCMS[] = 'wp';
+        if ($g_KnownCMS[$i] == strtolower(CMS_WEBASYST)) $g_KnownCMS[] = 'shopscript';
+        if ($g_KnownCMS[$i] == strtolower(CMS_IPB)) $g_KnownCMS[] = 'ipb';
+        if ($g_KnownCMS[$i] == strtolower(CMS_DLE)) $g_KnownCMS[] = 'dle';
+        if ($g_KnownCMS[$i] == strtolower(CMS_INSTANTCMS)) $g_KnownCMS[] = 'instantcms';
+        if ($g_KnownCMS[$i] == strtolower(CMS_SHOPSCRIPT)) $g_KnownCMS[] = 'shopscript';
+    }
 }
 
 
 $g_DirIgnoreList = array();
 if ($defaults['skip_cache']) {
-   $g_DirIgnoreList[] = 'bitrix/cache/';
-   $g_DirIgnoreList[] = 'bitrix/managed_cache/';
-   $g_DirIgnoreList[] = 'bitrix/stack_cache/';
-   $g_DirIgnoreList[] = '/\w{2}/\w{32}\.php';
-}                            
+    $g_DirIgnoreList[] = 'bitrix/cache/';
+    $g_DirIgnoreList[] = 'bitrix/managed_cache/';
+    $g_DirIgnoreList[] = 'bitrix/stack_cache/';
+    $g_DirIgnoreList[] = '/\w{2}/\w{32}\.php';
+}
 
 $g_IgnoreList = array();
 $g_UrlIgnoreList = array();
@@ -3637,27 +2989,26 @@ $l_KnownFilename = '.aknown';
 
 if (file_exists($l_IgnoreFilename)) {
     $l_IgnoreListRaw = file($l_IgnoreFilename);
-    for ($i = 0; $i < count($l_IgnoreListRaw); $i++) 
-    {
-    	$g_IgnoreList[] = explode("\t", trim($l_IgnoreListRaw[$i]));
+    for ($i = 0; $i < count($l_IgnoreListRaw); $i++) {
+        $g_IgnoreList[] = explode("\t", trim($l_IgnoreListRaw[$i]));
     }
     unset($l_IgnoreListRaw);
 }
 
 if (file_exists($l_DirIgnoreFilename)) {
     $g_DirIgnoreList = file($l_DirIgnoreFilename);
-	
-	for ($i = 0; $i < count($g_DirIgnoreList); $i++) {
-		$g_DirIgnoreList[$i] = trim($g_DirIgnoreList[$i]);
-	}
+
+    for ($i = 0; $i < count($g_DirIgnoreList); $i++) {
+        $g_DirIgnoreList[$i] = trim($g_DirIgnoreList[$i]);
+    }
 }
 
 if (file_exists($l_UrlIgnoreFilename)) {
     $g_UrlIgnoreList = file($l_UrlIgnoreFilename);
-	
-	for ($i = 0; $i < count($g_UrlIgnoreList); $i++) {
-		$g_UrlIgnoreList[$i] = trim($g_UrlIgnoreList[$i]);
-	}
+
+    for ($i = 0; $i < count($g_UrlIgnoreList); $i++) {
+        $g_UrlIgnoreList[$i] = trim($g_UrlIgnoreList[$i]);
+    }
 }
 
 QCR_Debug();
@@ -3665,119 +3016,121 @@ QCR_Debug();
 // Load custom signatures
 
 try {
-	$s_file = new SplFileObject($g_AiBolitAbsolutePath."/ai-bolit.sig");
-	$s_file->setFlags(SplFileObject::READ_AHEAD | SplFileObject::SKIP_EMPTY | SplFileObject::DROP_NEW_LINE);
-	foreach ($s_file as $line) {
-		$g_FlexDBShe[] = preg_replace('~\G(?:[^#\\\\]+|\\\\.)*+\K#~', '\\#', $line); // escaping #
-	}
-	stdOut("Loaded " . $s_file->key() . " signatures from ai-bolit.sig");
-	$s_file = null; // file handler is closed
-} catch (Exception $e) { QCR_Debug( "Import ai-bolit.sig " . $e->getMessage() ); }
+    $s_file = new SplFileObject($g_AiBolitAbsolutePath . "/ai-bolit.sig");
+    $s_file->setFlags(SplFileObject::READ_AHEAD | SplFileObject::SKIP_EMPTY | SplFileObject::DROP_NEW_LINE);
+    foreach ($s_file as $line) {
+        $g_FlexDBShe[] = preg_replace('~\G(?:[^#\\\\]+|\\\\.)*+\K#~', '\\#', $line); // escaping #
+    }
+    stdOut("Loaded " . $s_file->key() . " signatures from ai-bolit.sig");
+    $s_file = null; // file handler is closed
+} catch (Exception $e) {
+    QCR_Debug("Import ai-bolit.sig " . $e->getMessage());
+}
 
 QCR_Debug();
 
-	$defaults['skip_ext'] = strtolower(trim($defaults['skip_ext']));
-         if ($defaults['skip_ext'] != '') {
-	    $g_IgnoredExt = explode(',', $defaults['skip_ext']);
-	    for ($i = 0; $i < count($g_IgnoredExt); $i++) {
-                $g_IgnoredExt[$i] = trim($g_IgnoredExt[$i]);
-             }
+$defaults['skip_ext'] = strtolower(trim($defaults['skip_ext']));
+if ($defaults['skip_ext'] != '') {
+    $g_IgnoredExt = explode(',', $defaults['skip_ext']);
+    for ($i = 0; $i < count($g_IgnoredExt); $i++) {
+        $g_IgnoredExt[$i] = trim($g_IgnoredExt[$i]);
+    }
 
-	    QCR_Debug('Skip files with extensions: ' . implode(',', $g_IgnoredExt));
-	    stdOut('Skip extensions: ' . implode(',', $g_IgnoredExt));
-         } 
+    QCR_Debug('Skip files with extensions: ' . implode(',', $g_IgnoredExt));
+    stdOut('Skip extensions: ' . implode(',', $g_IgnoredExt));
+}
 
 // scan single file
 if (defined('SCAN_FILE')) {
-   if (file_exists(SCAN_FILE) && is_file(SCAN_FILE) && is_readable(SCAN_FILE)) {
-       stdOut("Start scanning file '" . SCAN_FILE . "'.");
-       QCR_ScanFile(SCAN_FILE); 
-   } else { 
-       stdOut("Error:" . SCAN_FILE . " either is not a file or readable");
-   }
+    if (file_exists(SCAN_FILE) && is_file(SCAN_FILE) && is_readable(SCAN_FILE)) {
+        stdOut("Start scanning file '" . SCAN_FILE . "'.");
+        QCR_ScanFile(SCAN_FILE);
+    } else {
+        stdOut("Error:" . SCAN_FILE . " either is not a file or readable");
+    }
 } else {
-	if (isset($_GET['2check'])) {
-		$options['with-2check'] = 1;
-	}
-   
-   // scan list of files from file
-   if (!(ICHECK || IMAKE) && isset($options['with-2check']) && file_exists(DOUBLECHECK_FILE)) {
-      stdOut("Start scanning the list from '" . DOUBLECHECK_FILE . "'.\n");
-      $lines = file(DOUBLECHECK_FILE);
-      for ($i = 0, $size = count($lines); $i < $size; $i++) {
-         $lines[$i] = trim($lines[$i]);
-         if (empty($lines[$i])) unset($lines[$i]);
-      }
-      /* skip first line with <?php die("Forbidden"); ?> */
-      unset($lines[0]);
-      $g_FoundTotalFiles = count($lines);
-      $i = 1;
-      foreach ($lines as $l_FN) {
-         is_dir($l_FN) && $g_TotalFolder++;
-         printProgress( $i++, $l_FN);
-         $BOOL_RESULT = true; // display disable
-         is_file($l_FN) && QCR_ScanFile($l_FN, $i);
-         $BOOL_RESULT = false; // display enable
-      }
+    if (isset($_GET['2check'])) {
+        $options['with-2check'] = 1;
+    }
 
-      $g_FoundTotalDirs = $g_TotalFolder;
-      $g_FoundTotalFiles = $g_TotalFiles;
-
-   } else {
-      // scan whole file system
-      stdOut("Start scanning '" . ROOT_PATH . "'.\n");
-      
-      file_exists(QUEUE_FILENAME) && unlink(QUEUE_FILENAME);
-      if (ICHECK || IMAKE) {
-      // INTEGRITY CHECK
-        IMAKE and unlink(INTEGRITY_DB_FILE);
-        ICHECK and load_integrity_db();
-        QCR_IntegrityCheck(ROOT_PATH);
-        stdOut("Found $g_FoundTotalFiles files in $g_FoundTotalDirs directories.");
-        if (IMAKE) exit(0);
-        if (ICHECK) {
-            $i = $g_Counter;
-            $g_CRC = 0;
-            $changes = array();
-            $ref =& $g_IntegrityDB;
-            foreach ($g_IntegrityDB as $l_FileName => $type) {
-                unset($g_IntegrityDB[$l_FileName]);
-                $l_Ext2 = substr(strstr(basename($l_FileName), '.'), 1);
-                if (in_array(strtolower($l_Ext2), $g_IgnoredExt)) {
-                    continue;
-                }
-                for ($dr = 0; $dr < count($g_DirIgnoreList); $dr++) {
-                    if (($g_DirIgnoreList[$dr] != '') && preg_match('#' . $g_DirIgnoreList[$dr] . '#', $l_FileName, $l_Found)) {
-                        continue 2;
-                    }
-                }
-                $type = in_array($type, array('added', 'modified')) ? $type : 'deleted';
-                $type .= substr($l_FileName, -1) == '/' ? 'Dirs' : 'Files';
-                $changes[$type][] = ++$i;
-                AddResult($l_FileName, $i);
-            }
-            $g_FoundTotalFiles = count($changes['addedFiles']) + count($changes['modifiedFiles']);
-            stdOut("Found changes " . count($changes['modifiedFiles']) . " files and added " . count($changes['addedFiles']) . " files.");
+    // scan list of files from file
+    if (!(ICHECK || IMAKE) && isset($options['with-2check']) && file_exists(DOUBLECHECK_FILE)) {
+        stdOut("Start scanning the list from '" . DOUBLECHECK_FILE . "'.\n");
+        $lines = file(DOUBLECHECK_FILE);
+        for ($i = 0, $size = count($lines); $i < $size; $i++) {
+            $lines[$i] = trim($lines[$i]);
+            if (empty($lines[$i])) unset($lines[$i]);
         }
-        
-      } else {
-      QCR_ScanDirectories(ROOT_PATH);
-      stdOut("Found $g_FoundTotalFiles files in $g_FoundTotalDirs directories.");
-      }
+        /* skip first line with <?php die("Forbidden"); ?> */
+        unset($lines[0]);
+        $g_FoundTotalFiles = count($lines);
+        $i = 1;
+        foreach ($lines as $l_FN) {
+            is_dir($l_FN) && $g_TotalFolder++;
+            printProgress($i++, $l_FN);
+            $BOOL_RESULT = true; // display disable
+            is_file($l_FN) && QCR_ScanFile($l_FN, $i);
+            $BOOL_RESULT = false; // display enable
+        }
 
-      QCR_Debug();
-      stdOut(str_repeat(' ', 160),false);
-      QCR_GoScan(0);
-      unlink(QUEUE_FILENAME);
-   }
+        $g_FoundTotalDirs = $g_TotalFolder;
+        $g_FoundTotalFiles = $g_TotalFiles;
+
+    } else {
+        // scan whole file system
+        stdOut("Start scanning '" . ROOT_PATH . "'.\n");
+
+        file_exists(QUEUE_FILENAME) && unlink(QUEUE_FILENAME);
+        if (ICHECK || IMAKE) {
+            // INTEGRITY CHECK
+            IMAKE and unlink(INTEGRITY_DB_FILE);
+            ICHECK and load_integrity_db();
+            QCR_IntegrityCheck(ROOT_PATH);
+            stdOut("Found $g_FoundTotalFiles files in $g_FoundTotalDirs directories.");
+            if (IMAKE) exit(0);
+            if (ICHECK) {
+                $i = $g_Counter;
+                $g_CRC = 0;
+                $changes = array();
+                $ref =& $g_IntegrityDB;
+                foreach ($g_IntegrityDB as $l_FileName => $type) {
+                    unset($g_IntegrityDB[$l_FileName]);
+                    $l_Ext2 = substr(strstr(basename($l_FileName), '.'), 1);
+                    if (in_array(strtolower($l_Ext2), $g_IgnoredExt)) {
+                        continue;
+                    }
+                    for ($dr = 0; $dr < count($g_DirIgnoreList); $dr++) {
+                        if (($g_DirIgnoreList[$dr] != '') && preg_match('#' . $g_DirIgnoreList[$dr] . '#', $l_FileName, $l_Found)) {
+                            continue 2;
+                        }
+                    }
+                    $type = in_array($type, array('added', 'modified')) ? $type : 'deleted';
+                    $type .= substr($l_FileName, -1) == '/' ? 'Dirs' : 'Files';
+                    $changes[$type][] = ++$i;
+                    AddResult($l_FileName, $i);
+                }
+                $g_FoundTotalFiles = count($changes['addedFiles']) + count($changes['modifiedFiles']);
+                stdOut("Found changes " . count($changes['modifiedFiles']) . " files and added " . count($changes['addedFiles']) . " files.");
+            }
+
+        } else {
+            QCR_ScanDirectories(ROOT_PATH);
+            stdOut("Found $g_FoundTotalFiles files in $g_FoundTotalDirs directories.");
+        }
+
+        QCR_Debug();
+        stdOut(str_repeat(' ', 160), false);
+        QCR_GoScan(0);
+        unlink(QUEUE_FILENAME);
+    }
 }
 
 QCR_Debug();
 
 if (0/*PUBLIC*/) {
-   $g_HeuristicDetected = array();
-   $g_Iframer = array();
-   $g_Base64 = array();
+    $g_HeuristicDetected = array();
+    $g_Iframer = array();
+    $g_Base64 = array();
 }
 
 
@@ -3787,67 +3140,66 @@ $snum = 0;
 $list = check_whitelist($g_Structure['crc'], $snum);
 
 foreach (array('g_CriticalPHP', 'g_CriticalJS', 'g_Iframer', 'g_Base64', 'g_Phishing', 'g_AdwareList', 'g_Redirect') as $p) {
-	if (empty($$p)) continue;
-	
-	$p_Fragment = $p . "Fragment";
-	$p_Sig = $p . "Sig";
-	if ($p == 'g_Redirect') $p_Fragment = $p . "PHPFragment";
-	if ($p == 'g_Phishing') $p_Sig = $p . "SigFragment";
+    if (empty($$p)) continue;
 
-	$count = count($$p);
-	for ($i = 0; $i < $count; $i++) {
-		$id = "{${$p}[$i]}";
-		if (in_array($g_Structure['crc'][$id], $list)) {
-			unset($GLOBALS[$p][$i]);
-			unset($GLOBALS[$p_Sig][$i]);
-			unset($GLOBALS[$p_Fragment][$i]);
-		}
-	}
+    $p_Fragment = $p . "Fragment";
+    $p_Sig = $p . "Sig";
+    if ($p == 'g_Redirect') $p_Fragment = $p . "PHPFragment";
+    if ($p == 'g_Phishing') $p_Sig = $p . "SigFragment";
 
-	$$p = array_values($$p);
-	$$p_Fragment = array_values($$p_Fragment);
-	if (!empty($$p_Sig)) $$p_Sig = array_values($$p_Sig);
+    $count = count($$p);
+    for ($i = 0; $i < $count; $i++) {
+        $id = "$i";
+        if (in_array($g_Structure['crc'][$id], $list)) {
+            unset($GLOBALS[$p][$i]);
+            unset($GLOBALS[$p_Sig][$i]);
+            unset($GLOBALS[$p_Fragment][$i]);
+        }
+    }
+
+    $$p = array_values($$p);
+    $$p_Fragment = array_values($$p_Fragment);
+    if (!empty($$p_Sig)) $$p_Sig = array_values($$p_Sig);
 }
 
 
-if (QUARANTINE_CREATE_SORTED)
-{
-	$quarantinePath = REPORT_PATH . DIR_SEPARATOR . 'quarantine';
-	foreach (array('g_CriticalPHP', 'g_CriticalJS', 'g_Phishing') as $p) {
-		if (empty($$p)) continue;
+if (QUARANTINE_CREATE_SORTED) {
+    $quarantinePath = REPORT_PATH . DIR_SEPARATOR . 'quarantine';
+    foreach (array('g_CriticalPHP', 'g_CriticalJS', 'g_Phishing') as $p) {
+        if (empty($$p)) continue;
 
-		$p_Sig = $p . "Sig";
-		if ($p == 'g_Phishing') $p_Sig = $p . "SigFragment";
+        $p_Sig = $p . "Sig";
+        if ($p == 'g_Phishing') $p_Sig = $p . "SigFragment";
 
-		foreach ($$p as $k => $i) {
-			if (isset($list[$g_Structure['crc'][$i]])) continue;
-			$list[$g_Structure['crc'][$i]] = true;
-			$k = $GLOBALS[$p_Sig][$k];
-			$path = $quarantinePath . DIR_SEPARATOR . $k[0] . DIR_SEPARATOR . $k[1] . DIR_SEPARATOR . $k;
-			@mkdir($path, 0777, true);
-			$path .= DIR_SEPARATOR;
-			$filename = basename($g_Structure['n'][$i]);
-			while (is_file($path . $filename)) {
-				$filename = mt_rand(0, 99) . '-' . $filename;
-			}
-			copy($g_Structure['n'][$i], $path . $filename);
-		}
-	}
+        foreach ($$p as $k => $i) {
+            if (isset($list[$g_Structure['crc'][$i]])) continue;
+            $list[$g_Structure['crc'][$i]] = true;
+            $k = $GLOBALS[$p_Sig][$k];
+            $path = $quarantinePath . DIR_SEPARATOR . $k[0] . DIR_SEPARATOR . $k[1] . DIR_SEPARATOR . $k;
+            @mkdir($path, 0777, true);
+            $path .= DIR_SEPARATOR;
+            $filename = basename($g_Structure['n'][$i]);
+            while (is_file($path . $filename)) {
+                $filename = mt_rand(0, 99) . '-' . $filename;
+            }
+            copy($g_Structure['n'][$i], $path . $filename);
+        }
+    }
 }
 
 
-////////////////////////////////////////////////////////////////////////////
- if ($BOOL_RESULT) {
-  if ((count($g_CriticalPHP) > 0) OR (count($g_CriticalJS) > 0) OR (count($g_Base64) > 0) OR  (count($g_Iframer) > 0) OR  (count($g_UnixExec) > 0))
-  {
-  echo "1\n";
-  exit(0);
-  }
- }
-////////////////////////////////////////////////////////////////////////////
+
+if ($BOOL_RESULT) {
+    global $g_CriticalPHP;
+    if ((count($g_CriticalPHP) > 0) or (count($g_CriticalJS) > 0) or (count($g_Base64) > 0) or (count($g_Iframer) > 0) or (count($g_UnixExec) > 0)) {
+        echo "1\n";
+        exit(0);
+    }
+}
+
 $l_Template = str_replace("@@SERVICE_INFO@@", htmlspecialchars("[" . $int_enc . "][" . $snum . "]"), $l_Template);
 
-$l_Template = str_replace("@@PATH_URL@@", (isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : $g_AddPrefix . str_replace($g_NoPrefix, '', addSlash(ROOT_PATH))), $l_Template);
+$l_Template = str_replace("@@PATH_URL@@", ($_SERVER['HTTP_HOST'] ?? $g_AddPrefix . str_replace($g_NoPrefix, '', addSlash(ROOT_PATH))), $l_Template);
 
 $time_taken = seconds2Human(microtime(true) - START_TIME);
 
@@ -3857,475 +3209,492 @@ $l_ShowOffer = false;
 
 stdOut("\nBuilding report [ mode = " . AI_EXPERT . " ]\n");
 
-////////////////////////////////////////////////////////////////////////////
-// save 
+// save
 if (!(ICHECK || IMAKE))
-if (isset($options['with-2check']) || isset($options['quarantine']))
-if ((count($g_CriticalPHP) > 0) OR (count($g_CriticalJS) > 0) OR (count($g_Base64) > 0) OR 
-   (count($g_Iframer) > 0) OR  (count($g_UnixExec))) 
-{
-  if (!file_exists(DOUBLECHECK_FILE)) {	  
-      if ($l_FH = fopen(DOUBLECHECK_FILE, 'w')) {
-         fputs($l_FH, '<?php die("Forbidden"); ?>' . "\n");
+    global $g_CriticalPHP;
+    if (isset($options['with-2check']) || isset($options['quarantine']))
+        if ((count($g_CriticalPHP) > 0) or (count($g_CriticalJS) > 0) or (count($g_Base64) > 0) or
+            (count($g_Iframer) > 0) or (count($g_UnixExec))) {
+            if (!file_exists(DOUBLECHECK_FILE)) {
+                if ($l_FH = fopen(DOUBLECHECK_FILE, 'w')) {
+                    fputs($l_FH, '<?php die("Forbidden"); ?>' . "\n");
 
-         $l_CurrPath = dirname(__FILE__);
-		 
-		 if (!isset($g_CriticalPHP)) { $g_CriticalPHP = array(); }
-		 if (!isset($g_CriticalJS)) { $g_CriticalJS = array(); }
-		 if (!isset($g_Iframer)) { $g_Iframer = array(); }
-		 if (!isset($g_Base64)) { $g_Base64 = array(); }
-		 if (!isset($g_Phishing)) { $g_Phishing = array(); }
-		 if (!isset($g_AdwareList)) { $g_AdwareList = array(); }
-		 if (!isset($g_Redirect)) { $g_Redirect = array(); }
-		 
-         $tmpIndex = array_merge($g_CriticalPHP, $g_CriticalJS, $g_Phishing, $g_Base64, $g_Iframer, $g_AdwareList, $g_Redirect);
-         $tmpIndex = array_values(array_unique($tmpIndex));
+                    $l_CurrPath = dirname(__FILE__);
 
-         for ($i = 0; $i < count($tmpIndex); $i++) {
-             $tmpIndex[$i] = str_replace($l_CurrPath, '.', $g_Structure['n'][$tmpIndex[$i]]);
-         }
+                    if (!isset($g_CriticalPHP)) {
+                        $g_CriticalPHP = array();
+                    }
+                    if (!isset($g_CriticalJS)) {
+                        $g_CriticalJS = array();
+                    }
+                    if (!isset($g_Iframer)) {
+                        $g_Iframer = array();
+                    }
+                    if (!isset($g_Base64)) {
+                        $g_Base64 = array();
+                    }
+                    if (!isset($g_Phishing)) {
+                        $g_Phishing = array();
+                    }
+                    if (!isset($g_AdwareList)) {
+                        $g_AdwareList = array();
+                    }
+                    if (!isset($g_Redirect)) {
+                        $g_Redirect = array();
+                    }
 
-         for ($i = 0; $i < count($g_UnixExec); $i++) {
-             $tmpIndex[] = str_replace($l_CurrPath, '.', $g_UnixExec[$i]);
-         }
+                    $tmpIndex = array_merge($g_CriticalPHP, $g_CriticalJS, $g_Phishing, $g_Base64, $g_Iframer, $g_AdwareList, $g_Redirect);
+                    $tmpIndex = array_values(array_unique($tmpIndex));
 
-         $tmpIndex = array_values(array_unique($tmpIndex));
+                    for ($i = 0; $i < count($tmpIndex); $i++) {
+                        $tmpIndex[$i] = str_replace($l_CurrPath, '.', $g_Structure['n'][$tmpIndex[$i]]);
+                    }
 
-         for ($i = 0; $i < count($tmpIndex); $i++) {
-             fputs($l_FH, $tmpIndex[$i] . "\n");
-         }
+                    for ($i = 0; $i < count($g_UnixExec); $i++) {
+                        $tmpIndex[] = str_replace($l_CurrPath, '.', $g_UnixExec[$i]);
+                    }
 
-         fclose($l_FH);
-      } else {
-         stdOut("Error! Cannot create " . DOUBLECHECK_FILE);
-      }      
-  } else {
-      stdOut(DOUBLECHECK_FILE . ' already exists.');
-      if (AI_STR_044 != '') $l_Result .= '<div class="rep">' . AI_STR_044 . '</div>';
-  }
- 
-}
+                    $tmpIndex = array_values(array_unique($tmpIndex));
 
-////////////////////////////////////////////////////////////////////////////
+                    for ($i = 0; $i < count($tmpIndex); $i++) {
+                        fputs($l_FH, $tmpIndex[$i] . "\n");
+                    }
+
+                    fclose($l_FH);
+                } else {
+                    stdOut("Error! Cannot create " . DOUBLECHECK_FILE);
+                }
+            } else {
+                stdOut(DOUBLECHECK_FILE . ' already exists.');
+                if (AI_STR_044 != '') $l_Result .= '<div class="rep">' . AI_STR_044 . '</div>';
+            }
+
+        }
+
+
 
 $l_Summary = '<div class="title">' . AI_STR_074 . '</div>';
 $l_Summary .= '<table cellspacing=0 border=0>';
 
 if (count($g_Redirect) > 0) {
-   $l_Summary .= makeSummary(AI_STR_059, count($g_Redirect), "crit");
+    $l_Summary .= makeSummary(AI_STR_059, count($g_Redirect), "crit");
 }
 
 if (count($g_CriticalPHP) > 0) {
-   $l_Summary .= makeSummary(AI_STR_060, count($g_CriticalPHP), "crit");
+    $l_Summary .= makeSummary(AI_STR_060, count($g_CriticalPHP), "crit");
 }
 
 if (count($g_CriticalJS) > 0) {
-   $l_Summary .= makeSummary(AI_STR_061, count($g_CriticalJS), "crit");
+    $l_Summary .= makeSummary(AI_STR_061, count($g_CriticalJS), "crit");
 }
 
 if (count($g_Phishing) > 0) {
-   $l_Summary .= makeSummary(AI_STR_062, count($g_Phishing), "crit");
+    $l_Summary .= makeSummary(AI_STR_062, count($g_Phishing), "crit");
 }
 
 if (count($g_UnixExec) > 0) {
-   $l_Summary .= makeSummary(AI_STR_063, count($g_UnixExec), (AI_EXPERT > 1 ? 'crit' : 'warn'));
+    $l_Summary .= makeSummary(AI_STR_063, count($g_UnixExec), (AI_EXPERT > 1 ? 'crit' : 'warn'));
 }
 
 if (count($g_Iframer) > 0) {
-   $l_Summary .= makeSummary(AI_STR_064, count($g_Iframer), "crit");
+    $l_Summary .= makeSummary(AI_STR_064, count($g_Iframer), "crit");
 }
 
 if (count($g_NotRead) > 0) {
-   $l_Summary .= makeSummary(AI_STR_066, count($g_NotRead), "crit");
+    $l_Summary .= makeSummary(AI_STR_066, count($g_NotRead), "crit");
 }
 
 if (count($g_Base64) > 0) {
-   $l_Summary .= makeSummary(AI_STR_067, count($g_Base64), (AI_EXPERT > 1 ? 'crit' : 'warn'));
+    $l_Summary .= makeSummary(AI_STR_067, count($g_Base64), (AI_EXPERT > 1 ? 'crit' : 'warn'));
 }
 
 if (count($g_BigFiles) > 0) {
-   $l_Summary .= makeSummary(AI_STR_065, count($g_BigFiles), "warn");
+    $l_Summary .= makeSummary(AI_STR_065, count($g_BigFiles), "warn");
 }
 
 if (count($g_HeuristicDetected) > 0) {
-   $l_Summary .= makeSummary(AI_STR_068, count($g_HeuristicDetected), "warn");
+    $l_Summary .= makeSummary(AI_STR_068, count($g_HeuristicDetected), "warn");
 }
 
 if (count($g_SymLinks) > 0) {
-   $l_Summary .= makeSummary(AI_STR_069, count($g_SymLinks), "warn");
+    $l_Summary .= makeSummary(AI_STR_069, count($g_SymLinks), "warn");
 }
 
 if (count($g_HiddenFiles) > 0) {
-   $l_Summary .= makeSummary(AI_STR_070, count($g_HiddenFiles), "warn");
+    $l_Summary .= makeSummary(AI_STR_070, count($g_HiddenFiles), "warn");
 }
 
 if (count($g_AdwareList) > 0) {
-   $l_Summary .= makeSummary(AI_STR_072, count($g_AdwareList), "warn");
+    $l_Summary .= makeSummary(AI_STR_072, count($g_AdwareList), "warn");
 }
 
 if (count($g_EmptyLink) > 0) {
-   $l_Summary .= makeSummary(AI_STR_073, count($g_EmptyLink), "warn");
+    $l_Summary .= makeSummary(AI_STR_073, count($g_EmptyLink), "warn");
 }
 
- $l_Summary .= "</table><div class=details style=\"margin: 20px 20px 20px 0\">" . AI_STR_080 . "</div>\n";
+$l_Summary .= "</table><div class=details style=\"margin: 20px 20px 20px 0\">" . AI_STR_080 . "</div>\n";
 
- $l_Template = str_replace("@@SUMMARY@@", $l_Summary, $l_Template);
+$l_Template = str_replace("@@SUMMARY@@", $l_Summary, $l_Template);
 
 
- $l_Result .= AI_STR_015;
- 
- $l_Template = str_replace("@@VERSION@@", AI_VERSION, $l_Template);
- 
-////////////////////////////////////////////////////////////////////////////
+$l_Result .= AI_STR_015;
+
+$l_Template = str_replace("@@VERSION@@", AI_VERSION, $l_Template);
+
 
 
 
 if (function_exists("gethostname") && is_callable("gethostname")) {
-  $l_HostName = gethostname();
+    $l_HostName = gethostname();
 } else {
-  $l_HostName = '???';
+    $l_HostName = '???';
 }
 
-$l_PlainResult = "# Malware list detected by AI-Bolit (https://revisium.com/ai/) on " . date("d/m/Y H:i:s", time()) . " " . $l_HostName .  "\n\n";
+$l_PlainResult = "# Malware list detected by AI-Bolit (https://revisium.com/ai/) on " . date("d/m/Y H:i:s", time()) . " " . $l_HostName . "\n\n";
 
 stdOut("Building list of vulnerable scripts " . count($g_Vulnerable));
 
 if (count($g_Vulnerable) > 0) {
     $l_Result .= '<div class="note_vir">' . AI_STR_081 . ' (' . count($g_Vulnerable) . ')</div><div class="crit">';
- 	foreach ($g_Vulnerable as $l_Item) {
-	    $l_Result .= '<li>' . makeSafeFn($g_Structure['n'][$l_Item['ndx']], true) . ' - ' . $l_Item['id'] . '</li>';
-            $l_PlainResult .= '[VULNERABILITY] ' . replacePathArray($g_Structure['n'][$l_Item['ndx']]) . ' - ' . $l_Item['id'] . "\n";
- 	}
-	
-  $l_Result .= '</div><p>' . PHP_EOL;
-  $l_PlainResult .= "\n";
+    foreach ($g_Vulnerable as $list_Item) {
+        $l_Result .= '<li>' . makeSafeFn($g_Structure['n'][$list_Item['ndx']], true) . ' - ' . $list_Item['id'] . '</li>';
+        $l_PlainResult .= '[VULNERABILITY] ' . replacePathArray($g_Structure['n'][$list_Item['ndx']]) . ' - ' . $list_Item['id'] . "\n";
+    }
+
+    $l_Result .= '</div><p>' . PHP_EOL;
+    $l_PlainResult .= "\n";
 }
 
 
 stdOut("Building list of shells " . count($g_CriticalPHP));
 
 if (count($g_CriticalPHP) > 0) {
-  $l_Result .= '<div class="note_vir">' . AI_STR_016 . ' (' . count($g_CriticalPHP) . ')</div><div class="crit">';
-  $l_Result .= printList($g_CriticalPHP, $g_CriticalPHPFragment, true, $g_CriticalPHPSig, 'table_crit');
-  $l_PlainResult .= '[SERVER MALWARE]' . "\n" . printPlainList($g_CriticalPHP, $g_CriticalPHPFragment, true, $g_CriticalPHPSig, 'table_crit') . "\n";
-  $l_Result .= '</div>' . PHP_EOL;
+    $l_Result .= '<div class="note_vir">' . AI_STR_016 . ' (' . count($g_CriticalPHP) . ')</div><div class="crit">';
+    $l_Result .= printList($g_CriticalPHP, $g_CriticalPHPFragment, true, $g_CriticalPHPSig, 'table_crit');
+    $l_PlainResult .= '[SERVER MALWARE]' . "\n" . printPlainList($g_CriticalPHP, $g_CriticalPHPFragment, true) . "\n";
+    $l_Result .= '</div>' . PHP_EOL;
 
-  $l_ShowOffer = true;
+    $l_ShowOffer = true;
 } else {
-  $l_Result .= '<div class="ok"><b>' . AI_STR_017. '</b></div>';
+    $l_Result .= '<div class="ok"><b>' . AI_STR_017 . '</b></div>';
 }
 
 stdOut("Building list of js " . count($g_CriticalJS));
 
 if (count($g_CriticalJS) > 0) {
-  $l_Result .= '<div class="note_vir">' . AI_STR_018 . ' (' . count($g_CriticalJS) . ')</div><div class="crit">';
-  $l_Result .= printList($g_CriticalJS, $g_CriticalJSFragment, true, $g_CriticalJSSig, 'table_vir');
-  $l_PlainResult .= '[CLIENT MALWARE / JS]'  . "\n" . printPlainList($g_CriticalJS, $g_CriticalJSFragment, true, $g_CriticalJSSig, 'table_vir') . "\n";
-  $l_Result .= "</div>" . PHP_EOL;
+    $l_Result .= '<div class="note_vir">' . AI_STR_018 . ' (' . count($g_CriticalJS) . ')</div><div class="crit">';
+    $l_Result .= printList($g_CriticalJS, $g_CriticalJSFragment, true, $g_CriticalJSSig, 'table_vir');
+    $l_PlainResult .= '[CLIENT MALWARE / JS]' . "\n" . printPlainList($g_CriticalJS, $g_CriticalJSFragment, true) . "\n";
+    $l_Result .= "</div>" . PHP_EOL;
 
-  $l_ShowOffer = true;
+    $l_ShowOffer = true;
 }
 
 stdOut("Building phishing pages " . count($g_Phishing));
 
 if (count($g_Phishing) > 0) {
-  $l_Result .= '<div class="note_vir">' . AI_STR_058 . ' (' . count($g_Phishing) . ')</div><div class="crit">';
-  $l_Result .= printList($g_Phishing, $g_PhishingFragment, true, $g_PhishingSigFragment, 'table_vir');
-  $l_PlainResult .= '[PHISHING]'  . "\n" . printPlainList($g_Phishing, $g_PhishingFragment, true, $g_PhishingSigFragment, 'table_vir') . "\n";
-  $l_Result .= "</div>". PHP_EOL;
+    $l_Result .= '<div class="note_vir">' . AI_STR_058 . ' (' . count($g_Phishing) . ')</div><div class="crit">';
+    $l_Result .= printList($g_Phishing, $g_PhishingFragment, true, $g_PhishingSigFragment, 'table_vir');
+    $l_PlainResult .= '[PHISHING]' . "\n" . printPlainList($g_Phishing, $g_PhishingFragment, true) . "\n";
+    $l_Result .= "</div>" . PHP_EOL;
 
-  $l_ShowOffer = true;
+    $l_ShowOffer = true;
 }
 
 stdOut("Building list of iframes " . count($g_Iframer));
 
 if (count($g_Iframer) > 0) {
-  $l_ShowOffer = true;
-  $l_Result .= '<div class="note_vir">' . AI_STR_021 . ' (' . count($g_Iframer) . ')</div><div class="crit">';
-  $l_Result .= printList($g_Iframer, $g_IframerFragment, true);
-  $l_Result .= "</div>" . PHP_EOL;
+    $l_ShowOffer = true;
+    $l_Result .= '<div class="note_vir">' . AI_STR_021 . ' (' . count($g_Iframer) . ')</div><div class="crit">';
+    $l_Result .= printList($g_Iframer, $g_IframerFragment, true);
+    $l_Result .= "</div>" . PHP_EOL;
 
 }
 
 stdOut("Building list of base64s " . count($g_Base64));
 
 if (count($g_Base64) > 0) {
-  if (AI_EXPERT > 1) $l_ShowOffer = true;
-  
-  $l_Result .= '<div class="note_' . (AI_EXPERT > 1 ? 'vir' : 'warn') . '">' . AI_STR_020 . ' (' . count($g_Base64) . ')</div><div class="' . (AI_EXPERT > 1 ? 'crit' : 'warn') . '">';
-  $l_Result .= printList($g_Base64, $g_Base64Fragment, true);
-  $l_PlainResult .= '[ENCODED / SUSP_EXT]' . "\n" . printPlainList($g_Base64, $g_Base64Fragment, true) . "\n";
-  $l_Result .= "</div>" . PHP_EOL;
+    if (AI_EXPERT > 1) $l_ShowOffer = true;
+
+    $l_Result .= '<div class="note_' . (AI_EXPERT > 1 ? 'vir' : 'warn') . '">' . AI_STR_020 . ' (' . count($g_Base64) . ')</div><div class="' . (AI_EXPERT > 1 ? 'crit' : 'warn') . '">';
+    $l_Result .= printList($g_Base64, $g_Base64Fragment, true);
+    $l_PlainResult .= '[ENCODED / SUSP_EXT]' . "\n" . printPlainList($g_Base64, $g_Base64Fragment, true) . "\n";
+    $l_Result .= "</div>" . PHP_EOL;
 
 }
 
 stdOut("Building list of redirects " . count($g_Redirect));
 if (count($g_Redirect) > 0) {
-  $l_ShowOffer = true;
-  $l_Result .= '<div class="note_vir">' . AI_STR_027 . ' (' . count($g_Redirect) . ')</div><div class="crit">';
-  $l_Result .= printList($g_Redirect, $g_RedirectPHPFragment, true);
-  $l_Result .= "</div>" . PHP_EOL;
+    $l_ShowOffer = true;
+    $l_Result .= '<div class="note_vir">' . AI_STR_027 . ' (' . count($g_Redirect) . ')</div><div class="crit">';
+    $l_Result .= printList($g_Redirect, $g_RedirectPHPFragment, true);
+    $l_Result .= "</div>" . PHP_EOL;
 }
 
 
 stdOut("Building list of unread files " . count($g_NotRead));
 
 if (count($g_NotRead) > 0) {
-  $l_Result .= '<div class="note_vir">' . AI_STR_030 . ' (' . count($g_NotRead) . ')</div><div class="crit">';
-  $l_Result .= printList($g_NotRead);
-  $l_Result .= "</div><div class=\"spacer\"></div>" . PHP_EOL;
-  $l_PlainResult .= '[SCAN ERROR / SKIPPED]' . "\n" . implode("\n", replacePathArray($g_NotRead)) . "\n\n";
+    $l_Result .= '<div class="note_vir">' . AI_STR_030 . ' (' . count($g_NotRead) . ')</div><div class="crit">';
+    $l_Result .= printList($g_NotRead);
+    $l_Result .= "</div><div class=\"spacer\"></div>" . PHP_EOL;
+    $l_PlainResult .= '[SCAN ERROR / SKIPPED]' . "\n" . implode("\n", replacePathArray($g_NotRead)) . "\n\n";
 }
 
 stdOut("Building list of symlinks " . count($g_SymLinks));
 
 if (count($g_SymLinks) > 0) {
-  $l_Result .= '<div class="note_vir">' . AI_STR_022 . ' (' . count($g_SymLinks) . ')</div><div class="crit">';
-  $l_Result .= nl2br(makeSafeFn(implode("\n", $g_SymLinks), true));
-  $l_Result .= "</div><div class=\"spacer\"></div>";
+    $l_Result .= '<div class="note_vir">' . AI_STR_022 . ' (' . count($g_SymLinks) . ')</div><div class="crit">';
+    $l_Result .= nl2br(makeSafeFn(implode("\n", $g_SymLinks), true));
+    $l_Result .= "</div><div class=\"spacer\"></div>";
 }
 
 stdOut("Building list of unix executables and odd scripts " . count($g_UnixExec));
 
 if (count($g_UnixExec) > 0) {
-  $l_Result .= '<div class="note_' . (AI_EXPERT > 1 ? 'vir' : 'warn') . '">' . AI_STR_019 . ' (' . count($g_UnixExec) . ')</div><div class="' . (AI_EXPERT > 1 ? 'crit' : 'warn') . '">';
-  $l_Result .= nl2br(makeSafeFn(implode("\n", $g_UnixExec), true));
-  $l_PlainResult .= '[UNIX EXEC]' . "\n" . implode("\n", replacePathArray($g_UnixExec)) . "\n\n";
-  $l_Result .= "</div>" . PHP_EOL;
+    $l_Result .= '<div class="note_' . (AI_EXPERT > 1 ? 'vir' : 'warn') . '">' . AI_STR_019 . ' (' . count($g_UnixExec) . ')</div><div class="' . (AI_EXPERT > 1 ? 'crit' : 'warn') . '">';
+    $l_Result .= nl2br(makeSafeFn(implode("\n", $g_UnixExec), true));
+    $l_PlainResult .= '[UNIX EXEC]' . "\n" . implode("\n", replacePathArray($g_UnixExec)) . "\n\n";
+    $l_Result .= "</div>" . PHP_EOL;
 
-  if (AI_EXPERT > 1) $l_ShowOffer = true;
+    if (AI_EXPERT > 1) $l_ShowOffer = true;
 }
 
-////////////////////////////////////
+
 $l_WarningsNum = count($g_HeuristicDetected) + count($g_HiddenFiles) + count($g_BigFiles) + count($g_PHPCodeInside) + count($g_AdwareList) + count($g_EmptyLink) + count($g_Doorway) + (count($g_WarningPHP[0]) + count($g_WarningPHP[1]) + count($g_SkippedFolders));
 
 if ($l_WarningsNum > 0) {
-	$l_Result .= "<div style=\"margin-top: 20px\" class=\"title\">" . AI_STR_026 . "</div>";
+    $l_Result .= "<div style=\"margin-top: 20px\" class=\"title\">" . AI_STR_026 . "</div>";
 }
 
 stdOut("Building list of links/adware " . count($g_AdwareList));
 
 if (count($g_AdwareList) > 0) {
-  $l_Result .= '<div class="note_warn">' . AI_STR_029 . '</div><div class="warn">';
-  $l_Result .= printList($g_AdwareList, $g_AdwareListFragment, true);
-  $l_PlainResult .= '[ADWARE]' . "\n" . printPlainList($g_AdwareList, $g_AdwareListFragment, true) . "\n";
-  $l_Result .= "</div>" . PHP_EOL;
+    $l_Result .= '<div class="note_warn">' . AI_STR_029 . '</div><div class="warn">';
+    $l_Result .= printList($g_AdwareList, $g_AdwareListFragment, true);
+    $l_PlainResult .= '[ADWARE]' . "\n" . printPlainList($g_AdwareList, $g_AdwareListFragment, true) . "\n";
+    $l_Result .= "</div>" . PHP_EOL;
 
 }
 
 stdOut("Building list of heuristics " . count($g_HeuristicDetected));
 
 if (count($g_HeuristicDetected) > 0) {
-  $l_Result .= '<div class="note_warn">' . AI_STR_052 . ' (' . count($g_HeuristicDetected) . ')</div><div class="warn">';
-  for ($i = 0; $i < count($g_HeuristicDetected); $i++) {
-	   $l_Result .= '<li>' . makeSafeFn($g_Structure['n'][$g_HeuristicDetected[$i]], true) . ' (' . get_descr_heur($g_HeuristicType[$i]) . ')</li>';
-  }
-  
-  $l_Result .= '</ul></div><div class=\"spacer\"></div>' . PHP_EOL;
+    $l_Result .= '<div class="note_warn">' . AI_STR_052 . ' (' . count($g_HeuristicDetected) . ')</div><div class="warn">';
+    for ($i = 0; $i < count($g_HeuristicDetected); $i++) {
+        $l_Result .= '<li>' . makeSafeFn($g_Structure['n'][$g_HeuristicDetected[$i]], true) . ' (' . get_descr_heur($g_HeuristicType[$i]) . ')</li>';
+    }
+
+    $l_Result .= '</ul></div><div class=\"spacer\"></div>' . PHP_EOL;
 }
 
 stdOut("Building list of hidden files " . count($g_HiddenFiles));
 if (count($g_HiddenFiles) > 0) {
-  $l_Result .= '<div class="note_warn">' . AI_STR_023 . ' (' . count($g_HiddenFiles) . ')</div><div class="warn">';
-  $l_Result .= nl2br(makeSafeFn(implode("\n", $g_HiddenFiles), true));
-  $l_Result .= "</div><div class=\"spacer\"></div>" . PHP_EOL;
-  $l_PlainResult .= '[HIDDEN]' . "\n" . implode("\n", replacePathArray($g_HiddenFiles)) . "\n\n";
+    $l_Result .= '<div class="note_warn">' . AI_STR_023 . ' (' . count($g_HiddenFiles) . ')</div><div class="warn">';
+    $l_Result .= nl2br(makeSafeFn(implode("\n", $g_HiddenFiles), true));
+    $l_Result .= "</div><div class=\"spacer\"></div>" . PHP_EOL;
+    $l_PlainResult .= '[HIDDEN]' . "\n" . implode("\n", replacePathArray($g_HiddenFiles)) . "\n\n";
 }
 
-stdOut("Building list of bigfiles " . count($g_BigFiles));
-$max_size_to_scan = getBytes(MAX_SIZE_TO_SCAN);
-$max_size_to_scan = $max_size_to_scan > 0 ? $max_size_to_scan : getBytes('1m');
+stdOut("Building list of big files " . count($g_BigFiles));
+$max_size_to_scan = 0;
+try {
+    $max_size_to_scan = getBytes(MAX_SIZE_TO_SCAN);
+} catch (Exception $e) {
+    echo '';
+}
+try {
+    $max_size_to_scan = $max_size_to_scan > 0 ? $max_size_to_scan : getBytes('1m');
+} catch (Exception $e) {
+    echo '';
+}
 
 if (count($g_BigFiles) > 0) {
-  $l_Result .= "<div class=\"note_warn\">" . sprintf(AI_STR_038, bytes2Human($max_size_to_scan)) . '</div><div class="warn">';
-  $l_Result .= printList($g_BigFiles);
-  $l_Result .= "</div>";
-  $l_PlainResult .= '[BIG FILES / SKIPPED]' . "\n" . printPlainList($g_BigFiles) . "\n\n";
-} 
+    $l_Result .= "<div class=\"note_warn\">" . sprintf(AI_STR_038, normalize_bytes($max_size_to_scan)) . '</div><div class="warn">';
+    $l_Result .= printList($g_BigFiles);
+    $l_Result .= "</div>";
+    $l_PlainResult .= '[BIG FILES / SKIPPED]' . "\n" . printPlainList($g_BigFiles) . "\n\n";
+}
 
 stdOut("Building list of php inj " . count($g_PHPCodeInside));
 
 if ((count($g_PHPCodeInside) > 0) && (($defaults['report_mask'] & REPORT_MASK_PHPSIGN) == REPORT_MASK_PHPSIGN)) {
-  $l_Result .= '<div class="note_warn">' . AI_STR_028 . '</div><div class="warn">';
-  $l_Result .= printList($g_PHPCodeInside, $g_PHPCodeInsideFragment, true);
-  $l_Result .= "</div>" . PHP_EOL;
+    global $g_PHPCodeInsideFragment;
+    $l_Result .= '<div class="note_warn">' . AI_STR_028 . '</div><div class="warn">';
+    $l_Result .= printList($g_PHPCodeInside, $g_PHPCodeInsideFragment, true);
+    $l_Result .= "</div>" . PHP_EOL;
 
 }
 
 stdOut("Building list of empty links " . count($g_EmptyLink));
 if (count($g_EmptyLink) > 0) {
-  $l_Result .= '<div class="note_warn">' . AI_STR_031 . '</div><div class="warn">';
-  $l_Result .= printList($g_EmptyLink, '', true);
+    $l_Result .= '<div class="note_warn">' . AI_STR_031 . '</div><div class="warn">';
+    $l_Result .= printList($g_EmptyLink, '', true);
 
-  $l_Result .= AI_STR_032 . '<br/>';
-  
-  if (count($g_EmptyLink) == MAX_EXT_LINKS) {
-      $l_Result .= '(' . AI_STR_033 . MAX_EXT_LINKS . ')<br/>';
+    $l_Result .= AI_STR_032 . '<br/>';
+
+    if (count($g_EmptyLink) == MAX_EXT_LINKS) {
+        $l_Result .= '(' . AI_STR_033 . MAX_EXT_LINKS . ')<br/>';
     }
-   
-  for ($i = 0; $i < count($g_EmptyLink); $i++) {
-	$l_Idx = $g_EmptyLink[$i];
-    for ($j = 0; $j < count($g_EmptyLinkSrc[$l_Idx]); $j++) {
-      $l_Result .= '<span class="details">' . makeSafeFn($g_Structure['n'][$g_EmptyLink[$i]], true) . ' &rarr; ' . htmlspecialchars($g_EmptyLinkSrc[$l_Idx][$j]) . '</span><br/>';
-	}
-  }
 
-  $l_Result .= "</div>";
+    for ($i = 0; $i < count($g_EmptyLink); $i++) {
+        $l_Idx = $g_EmptyLink[$i];
+        for ($j = 0; $j < count($g_EmptyLinkSrc[$l_Idx]); $j++) {
+            $l_Result .= '<span class="details">' . makeSafeFn($g_Structure['n'][$g_EmptyLink[$i]], true) . ' &rarr; ' . htmlspecialchars($g_EmptyLinkSrc[$l_Idx][$j]) . '</span><br/>';
+        }
+    }
+
+    $l_Result .= "</div>";
 
 }
 
 stdOut("Building list of doorways " . count($g_Doorway));
 
 if ((count($g_Doorway) > 0) && (($defaults['report_mask'] & REPORT_MASK_DOORWAYS) == REPORT_MASK_DOORWAYS)) {
-  $l_Result .= '<div class="note_warn">' . AI_STR_034 . '</div><div class="warn">';
-  $l_Result .= printList($g_Doorway);
-  $l_Result .= "</div>" . PHP_EOL;
+    $l_Result .= '<div class="note_warn">' . AI_STR_034 . '</div><div class="warn">';
+    $l_Result .= printList($g_Doorway);
+    $l_Result .= "</div>" . PHP_EOL;
 
 }
 
 stdOut("Building list of php warnings " . (count($g_WarningPHP[0]) + count($g_WarningPHP[1])));
 
 if (($defaults['report_mask'] & REPORT_MASK_SUSP) == REPORT_MASK_SUSP) {
-   if ((count($g_WarningPHP[0]) + count($g_WarningPHP[1])) > 0) {
-     $l_Result .= '<div class="note_warn">' . AI_STR_035 . '</div><div class="warn">';
+    if ((count($g_WarningPHP[0]) + count($g_WarningPHP[1])) > 0) {
+        $l_Result .= '<div class="note_warn">' . AI_STR_035 . '</div><div class="warn">';
 
-     for ($i = 0; $i < count($g_WarningPHP); $i++) {
-         if (count($g_WarningPHP[$i]) > 0) 
-            $l_Result .= printList($g_WarningPHP[$i], $g_WarningPHPFragment[$i], true, $g_WarningPHPSig, 'table_warn' . $i);
-     }                                                                                                                    
-     $l_Result .= "</div>" . PHP_EOL;
+        for ($i = 0; $i < count($g_WarningPHP); $i++) {
+            if (count($g_WarningPHP[$i]) > 0)
+                $l_Result .= printList($g_WarningPHP[$i], $g_WarningPHPFragment[$i], true, $g_WarningPHPSig, 'table_warn' . $i);
+        }
+        $l_Result .= "</div>" . PHP_EOL;
 
-   } 
+    }
 }
 
 stdOut("Building list of skipped dirs " . count($g_SkippedFolders));
 if (count($g_SkippedFolders) > 0) {
-  $l_Result .= '<div class="note_warn">' . AI_STR_036 . '</div><div class="warn">';
-     $l_Result .= nl2br(makeSafeFn(implode("\n", $g_SkippedFolders), true));   
-     $l_Result .= "</div>" . PHP_EOL;
- }
+    $l_Result .= '<div class="note_warn">' . AI_STR_036 . '</div><div class="warn">';
+    $l_Result .= nl2br(makeSafeFn(implode("\n", $g_SkippedFolders), true));
+    $l_Result .= "</div>" . PHP_EOL;
+}
 
- if (count($g_CMS) > 0) {
-      $l_Result .= "<div class=\"note_warn\">" . AI_STR_037 . "<br/>";
-      $l_Result .= nl2br(makeSafeFn(implode("\n", $g_CMS)));
-      $l_Result .= "</div>";
- }
+if (count($g_CMS) > 0) {
+    $l_Result .= "<div class=\"note_warn\">" . AI_STR_037 . "<br/>";
+    $l_Result .= nl2br(makeSafeFn(implode("\n", $g_CMS)));
+    $l_Result .= "</div>";
+}
 
 
 if (ICHECK) {
-	$l_Result .= "<div style=\"margin-top: 20px\" class=\"title\">" . AI_STR_087 . "</div>";
-	
+    global $changes;
+    $l_Result .= "<div style=\"margin-top: 20px\" class=\"title\">" . AI_STR_087 . "</div>";
+
     stdOut("Building list of added files " . count($changes['addedFiles']));
     if (count($changes['addedFiles']) > 0) {
-      $l_Result .= '<div class="note_int">' . AI_STR_082 . ' (' . count($changes['addedFiles']) . ')</div><div class="intitem">';
-      $l_Result .= printList($changes['addedFiles']);
-      $l_Result .= "</div>" . PHP_EOL;
+        $l_Result .= '<div class="note_int">' . AI_STR_082 . ' (' . count($changes['addedFiles']) . ')</div><div class="intitem">';
+        $l_Result .= printList($changes['addedFiles']);
+        $l_Result .= "</div>" . PHP_EOL;
     }
 
     stdOut("Building list of modified files " . count($changes['modifiedFiles']));
     if (count($changes['modifiedFiles']) > 0) {
-      $l_Result .= '<div class="note_int">' . AI_STR_083 . ' (' . count($changes['modifiedFiles']) . ')</div><div class="intitem">';
-      $l_Result .= printList($changes['modifiedFiles']);
-      $l_Result .= "</div>" . PHP_EOL;
+        $l_Result .= '<div class="note_int">' . AI_STR_083 . ' (' . count($changes['modifiedFiles']) . ')</div><div class="intitem">';
+        $l_Result .= printList($changes['modifiedFiles']);
+        $l_Result .= "</div>" . PHP_EOL;
     }
 
     stdOut("Building list of deleted files " . count($changes['deletedFiles']));
     if (count($changes['deletedFiles']) > 0) {
-      $l_Result .= '<div class="note_int">' . AI_STR_084 . ' (' . count($changes['deletedFiles']) . ')</div><div class="intitem">';
-      $l_Result .= printList($changes['deletedFiles']);
-      $l_Result .= "</div>" . PHP_EOL;
+        $l_Result .= '<div class="note_int">' . AI_STR_084 . ' (' . count($changes['deletedFiles']) . ')</div><div class="intitem">';
+        $l_Result .= printList($changes['deletedFiles']);
+        $l_Result .= "</div>" . PHP_EOL;
     }
 
     stdOut("Building list of added dirs " . count($changes['addedDirs']));
     if (count($changes['addedDirs']) > 0) {
-      $l_Result .= '<div class="note_int">' . AI_STR_085 . ' (' . count($changes['addedDirs']) . ')</div><div class="intitem">';
-      $l_Result .= printList($changes['addedDirs']);
-      $l_Result .= "</div>" . PHP_EOL;
+        $l_Result .= '<div class="note_int">' . AI_STR_085 . ' (' . count($changes['addedDirs']) . ')</div><div class="intitem">';
+        $l_Result .= printList($changes['addedDirs']);
+        $l_Result .= "</div>" . PHP_EOL;
     }
 
     stdOut("Building list of deleted dirs " . count($changes['deletedDirs']));
     if (count($changes['deletedDirs']) > 0) {
-      $l_Result .= '<div class="note_int">' . AI_STR_086 . ' (' . count($changes['deletedDirs']) . ')</div><div class="intitem">';
-      $l_Result .= printList($changes['deletedDirs']);
-      $l_Result .= "</div>" . PHP_EOL;
+        $l_Result .= '<div class="note_int">' . AI_STR_086 . ' (' . count($changes['deletedDirs']) . ')</div><div class="intitem">';
+        $l_Result .= printList($changes['deletedDirs']);
+        $l_Result .= "</div>" . PHP_EOL;
     }
 }
 
 if (!isCli()) {
-   $l_Result .= QCR_ExtractInfo($l_PhpInfoBody[1]);
+    global $l_PhpInfoBody;
+    $l_Result .= QCR_ExtractInfo($l_PhpInfoBody[1]);
 }
 
 
 if (function_exists('memory_get_peak_usage')) {
-  $l_Template = str_replace("@@MEMORY@@", AI_STR_043 . bytes2Human(memory_get_peak_usage()), $l_Template);
+    $l_Template = str_replace("@@MEMORY@@", AI_STR_043 . normalize_bytes(memory_get_peak_usage()), $l_Template);
 }
 
 $l_Template = str_replace('@@WARN_QUICK@@', ((SCAN_ALL_FILES || $g_SpecificExt) ? '' : AI_STR_045), $l_Template);
 
 if ($l_ShowOffer) {
-	$l_Template = str_replace('@@OFFER@@', $l_Offer, $l_Template);
+    $l_Template = str_replace('@@OFFER@@', $l_Offer, $l_Template);
 } else {
-	$l_Template = str_replace('@@OFFER@@', AI_STR_002, $l_Template);
+    $l_Template = str_replace('@@OFFER@@', AI_STR_002, $l_Template);
 }
 
 $l_Template = str_replace('@@CAUTION@@', AI_STR_003, $l_Template);
-
 $l_Template = str_replace('@@CREDITS@@', AI_STR_075, $l_Template);
-
 $l_Template = str_replace('@@FOOTER@@', AI_STR_076, $l_Template);
-
-$l_Template = str_replace('@@STAT@@', sprintf(AI_STR_012, $time_taken, date('d-m-Y в H:i:s', floor(START_TIME)) , date('d-m-Y в H:i:s')), $l_Template);
-
-////////////////////////////////////////////////////////////////////////////
+$l_Template = str_replace('@@STAT@@', sprintf(AI_STR_012, $time_taken, date('d-m-Y в H:i:s', floor(START_TIME)), date('d-m-Y в H:i:s')), $l_Template);
 $l_Template = str_replace("@@MAIN_CONTENT@@", $l_Result, $l_Template);
 
-if (!isCli())
-{
+if (!isCli()) {
     echo $l_Template;
     exit;
 }
 
-if (!defined('REPORT') OR REPORT === '')
-{
-	die('Report not written.');
+if (!defined('REPORT') or REPORT === '') {
+    die('Report not written.');
 }
- 
+
 // write plain text result
 if (PLAIN_FILE != '') {
-	
+
     $l_PlainResult = preg_replace('|__AI_LINE1__|smi', '[', $l_PlainResult);
     $l_PlainResult = preg_replace('|__AI_LINE2__|smi', '] ', $l_PlainResult);
     $l_PlainResult = preg_replace('|__AI_MARKER__|smi', ' %> ', $l_PlainResult);
 
-   if ($l_FH = fopen(PLAIN_FILE, "w")) {
-      fputs($l_FH, $l_PlainResult);
-      fclose($l_FH);
-   }
+    if ($l_FH = fopen(PLAIN_FILE, "w")) {
+        fputs($l_FH, $l_PlainResult);
+        fclose($l_FH);
+    }
 }
 
 $emails = getEmails(REPORT);
 
 if (!$emails) {
-	if ($l_FH = fopen($file, "w")) {
-	   fputs($l_FH, $l_Template);
-	   fclose($l_FH);
-	   stdOut("\nReport written to '$file'.");
-	} else {
-		stdOut("\nCannot create '$file'.");
-	}
-}	else	{
-		$headers = array(
-			'MIME-Version: 1.0',
-			'Content-type: text/html; charset=UTF-8',
-			'From: ' . ($defaults['email_from'] ? $defaults['email_from'] : 'AI-Bolit@myhost')
-		);
+    global $file;
+    if ($l_FH = fopen($file, "w")) {
+        fputs($l_FH, $l_Template);
+        fclose($l_FH);
+        stdOut("\nReport written to '$file'.");
+    } else {
+        stdOut("\nCannot create '$file'.");
+    }
+} else {
+    $headers = array(
+        'MIME-Version: 1.0',
+        'Content-type: text/html; charset=UTF-8',
+        'From: ' . ($defaults['email_from'] ?: 'AI-Bolit@myhost')
+    );
 
-		for ($i = 0, $size = sizeof($emails); $i < $size; $i++)
-		{
-			mail($emails[$i], 'AI-Bolit Report ' . date("d/m/Y H:i", time()), $l_Result, implode("\r\n", $headers));
-		}
+    for ($i = 0, $size = sizeof($emails); $i < $size; $i++) {
+        mail($emails[$i], 'AI-Bolit Report ' . date("d/m/Y H:i", time()), $l_Result, implode("\r\n", $headers));
+    }
 
-		stdOut("\nReport sended to " . implode(', ', $emails));
+    stdOut("\nReport sended to " . implode(', ', $emails));
 }
 
 
@@ -4339,12 +3708,12 @@ stdOut("Attention! DO NOT LEAVE either ai-bolit.php or AI-BOLIT-REPORT-<xxxx>-<y
 stdOut("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
 
 if (isset($options['quarantine'])) {
-	Quarantine();
+    Quarantine();
 }
 
 if (isset($options['cmd'])) {
-	stdOut("Run \"{$options['cmd']}\" ");
-	system($options['cmd']);
+    stdOut("Run \"{$options['cmd']}\" ");
+    system($options['cmd']);
 }
 
 QCR_Debug();
@@ -4352,16 +3721,17 @@ QCR_Debug();
 # exit with code
 
 $l_EC1 = count($g_CriticalPHP);
-$l_EC2 = count($g_CriticalJS) + count($g_Phishing) + count($g_WarningPHP[0]) + count($g_WarningPHP[1]);
+//$l_EC2 = count($g_CriticalJS) + count($g_Phishing) + count($g_WarningPHP[0]) + count($g_WarningPHP[1]);
+$l_EC2 = count($g_WarningPHP[0]) + count($g_WarningPHP[1]);
 
 if ($l_EC1 > 0) {
-	stdOut('Exit code 2');
-	exit(2);
+    stdOut('Exit code 2');
+    exit(2);
 } else {
-	if ($l_EC2 > 0) {
-		stdOut('Exit code 1');
-		exit(1);
-	}
+    if ($l_EC2 > 0) {
+        stdOut('Exit code 1');
+        exit(1);
+    }
 }
 
 stdOut('Exit code 0');
@@ -4371,557 +3741,532 @@ exit(0);
 
 function Quarantine()
 {
-	if (!file_exists(DOUBLECHECK_FILE)) {
-		return;
-	}
-	
-	$g_QuarantinePass = 'aibolit';
-	
-	$archive = "AI-QUARANTINE-" .rand(100000, 999999) . ".zip";
-	$infoFile = substr($archive, 0, -3) . "txt";
-	$report = REPORT_PATH . DIR_SEPARATOR . REPORT_FILE;
-	
+    if (!file_exists(DOUBLECHECK_FILE)) {
+        return;
+    }
 
-	foreach (file(DOUBLECHECK_FILE) as $file) {
-		$file = trim($file);
-		if (!is_file($file)) continue;
-	
-		$lStat = stat($file);
-		
-		// skip files over 300KB
-		if ($lStat['size'] > 300*1024) continue;
+    $g_QuarantinePass = 'aibolit';
 
-		// http://www.askapache.com/security/chmod-stat.html
-		$p = $lStat['mode'];
-		$perm ='-';
-		$perm.=(($p&0x0100)?'r':'-').(($p&0x0080)?'w':'-');
-		$perm.=(($p&0x0040)?(($p&0x0800)?'s':'x'):(($p&0x0800)?'S':'-'));
-		$perm.=(($p&0x0020)?'r':'-').(($p&0x0010)?'w':'-');
-		$perm.=(($p&0x0008)?(($p&0x0400)?'s':'x'):(($p&0x0400)?'S':'-'));
-		$perm.=(($p&0x0004)?'r':'-').(($p&0x0002)?'w':'-');
-		$perm.=(($p&0x0001)?(($p&0x0200)?'t':'x'):(($p&0x0200)?'T':'-'));
-		
-		$owner = (function_exists('posix_getpwuid'))? @posix_getpwuid($lStat['uid']) : array('name' => $lStat['uid']);
-		$group = (function_exists('posix_getgrgid'))? @posix_getgrgid($lStat['gid']) : array('name' => $lStat['uid']);
+    $archive = "AI-QUARANTINE-" . rand(100000, 999999) . ".zip";
+    $infoFile = substr($archive, 0, -3) . "txt";
+    $report = REPORT_PATH . DIR_SEPARATOR . REPORT_FILE;
+    $inf = [];
+    $files = [];
 
-		$inf['permission'][] = $perm;
-		$inf['owner'][] = $owner['name'];
-		$inf['group'][] = $group['name'];
-		$inf['size'][] = $lStat['size'] > 0 ? bytes2Human($lStat['size']) : '-';
-		$inf['ctime'][] = $lStat['ctime'] > 0 ? date("d/m/Y H:i:s", $lStat['ctime']) : '-';
-		$inf['mtime'][] = $lStat['mtime'] > 0 ? date("d/m/Y H:i:s", $lStat['mtime']) : '-';
-		$files[] = strpos($file, './') === 0 ? substr($file, 2) : $file;
-	}
-	
-	// get config files for cleaning
-	$configFilesRegex = 'config(uration|\.in[ic])?\.php$|dbconn\.php$';
-	$configFiles = preg_grep("~$configFilesRegex~", $files);
+    foreach (file(DOUBLECHECK_FILE) as $file) {
+        $file = trim($file);
+        if (!is_file($file)) continue;
 
-	// get columns width
-	$width = array();
-	foreach (array_keys($inf) as $k) {
-		$width[$k] = strlen($k);
-		for ($i = 0; $i < count($inf[$k]); ++$i) {
-			$len = strlen($inf[$k][$i]);
-			if ($len > $width[$k])
-				$width[$k] = $len;
-		}
-	}
+        $lStat = stat($file);
 
-	// headings of columns
-	$info = '';
-	foreach (array_keys($inf) as $k) {
-		$info .= str_pad($k, $width[$k], ' ', STR_PAD_LEFT). ' ';
-	}
-	$info .= "name\n";
-	
-	for ($i = 0; $i < count($files); ++$i) {
-		foreach (array_keys($inf) as $k) {
-			$info .= str_pad($inf[$k][$i], $width[$k], ' ', STR_PAD_LEFT). ' ';
-		}
-		$info .= $files[$i]."\n";
-	}
-	unset($inf, $width);
+        // skip files over 300KB
+        if ($lStat['size'] > 300 * 1024) continue;
 
-	exec("zip -v 2>&1", $output,$code);
+        // http://www.askapache.com/security/chmod-stat.html
+        $p = $lStat['mode'];
+        $perm = '-';
+        $perm .= (($p & 0x0100) ? 'r' : '-') . (($p & 0x0080) ? 'w' : '-');
+        $perm .= (($p & 0x0040) ? (($p & 0x0800) ? 's' : 'x') : (($p & 0x0800) ? 'S' : '-'));
+        $perm .= (($p & 0x0020) ? 'r' : '-') . (($p & 0x0010) ? 'w' : '-');
+        $perm .= (($p & 0x0008) ? (($p & 0x0400) ? 's' : 'x') : (($p & 0x0400) ? 'S' : '-'));
+        $perm .= (($p & 0x0004) ? 'r' : '-') . (($p & 0x0002) ? 'w' : '-');
+        $perm .= (($p & 0x0001) ? (($p & 0x0200) ? 't' : 'x') : (($p & 0x0200) ? 'T' : '-'));
 
-	if ($code == 0) {
-		$filter = '';
-		if ($configFiles && exec("grep -V 2>&1", $output, $code) && $code == 0) {
-			$filter = "|grep -v -E '$configFilesRegex'";
-		}
+        $owner = (function_exists('posix_getpwuid')) ? @posix_getpwuid($lStat['uid']) : array('name' => $lStat['uid']);
+        $group = (function_exists('posix_getgrgid')) ? @posix_getgrgid($lStat['gid']) : array('name' => $lStat['uid']);
 
-		exec("cat AI-BOLIT-DOUBLECHECK.php $filter |zip -@ --password $g_QuarantinePass $archive", $output, $code);
-		if ($code == 0) {
-			file_put_contents($infoFile, $info);
-			$m = array();
-			if (!empty($filter)) {
-				foreach ($configFiles as $file) {
-					$tmp = file_get_contents($file);
-					// remove  passwords
-					$tmp = preg_replace('~^.*?pass.*~im', '', $tmp);
-					// new file name
-					$file = preg_replace('~.*/~', '', $file) . '-' . rand(100000, 999999);
-					file_put_contents($file, $tmp);
-					$m[] = $file;
-				}
-			}
+        $inf['permission'][] = $perm;
+        $inf['owner'][] = $owner['name'];
+        $inf['group'][] = $group['name'];
+        $inf['size'][] = $lStat['size'] > 0 ? normalize_bytes($lStat['size']) : '-';
+        $inf['ctime'][] = $lStat['ctime'] > 0 ? date("d/m/Y H:i:s", $lStat['ctime']) : '-';
+        $inf['mtime'][] = $lStat['mtime'] > 0 ? date("d/m/Y H:i:s", $lStat['mtime']) : '-';
+        $files[] = strpos($file, './') === 0 ? substr($file, 2) : $file;
+    }
 
-			exec("zip -j --password $g_QuarantinePass $archive $infoFile $report " . DOUBLECHECK_FILE . ' ' . implode(' ', $m));
-			stdOut("\nCreate archive '" . realpath($archive) . "'");
-			stdOut("This archive have password '$g_QuarantinePass'");
-			foreach ($m as $file) unlink($file);
-			unlink($infoFile);
-			return;
-		}
-	}
-	
-	$zip = new ZipArchive;
-	
-	if ($zip->open($archive, ZIPARCHIVE::CREATE | ZIPARCHIVE::OVERWRITE) === false) {
-		stdOut("Cannot create '$archive'.");
-		return;
-	}
+    // get config files for cleaning
+    $configFilesRegex = 'config(uration|\.in[ic])?\.php$|dbconn\.php$';
+    $configFiles = preg_grep("~$configFilesRegex~", $files);
 
-	foreach ($files as $file) {
-		if (in_array($file, $configFiles)) {
-			$tmp = file_get_contents($file);
-			// remove  passwords
-			$tmp = preg_replace('~^.*?pass.*~im', '', $tmp);
-			$zip->addFromString($file, $tmp);
-		} else {
-			$zip->addFile($file);
-		}
-	}
-	$zip->addFile(DOUBLECHECK_FILE, DOUBLECHECK_FILE);
-	$zip->addFile($report, REPORT_FILE);
-	$zip->addFromString($infoFile, $info);
-	$zip->close();
+    // get columns width
+    $width = array();
+    foreach (array_keys($inf) as $k) {
+        $width[$k] = strlen($k);
+        for ($i = 0; $i < count($inf[$k]); ++$i) {
+            $len = strlen($inf[$k][$i]);
+            if ($len > $width[$k])
+                $width[$k] = $len;
+        }
+    }
 
-	stdOut("\nCreate archive '" . realpath($archive) . "'.");
-	stdOut("This archive has no password!");
+    // headings of columns
+    $info = '';
+    foreach (array_keys($inf) as $k) {
+        $info .= str_pad($k, $width[$k], ' ', STR_PAD_LEFT) . ' ';
+    }
+    $info .= "name\n";
+
+    for ($i = 0; $i < count($files); ++$i) {
+        foreach (array_keys($inf) as $k) {
+            $info .= str_pad($inf[$k][$i], $width[$k], ' ', STR_PAD_LEFT) . ' ';
+        }
+        $info .= $files[$i] . "\n";
+    }
+    unset($inf, $width);
+
+    exec("zip -v 2>&1", $output, $code);
+
+    if ($code == 0) {
+        $filter = '';
+        if ($configFiles && exec("grep -V 2>&1", $output, $code) && $code == 0) {
+            $filter = "|grep -v -E '$configFilesRegex'";
+        }
+
+        exec("cat AI-BOLIT-DOUBLECHECK.php $filter |zip -@ --password $g_QuarantinePass $archive", $output, $code);
+        if ($code == 0) {
+            file_put_contents($infoFile, $info);
+            $m = array();
+            if (!empty($filter)) {
+                foreach ($configFiles as $file) {
+                    $tmp = file_get_contents($file);
+                    // remove  passwords
+                    $tmp = preg_replace('~^.*?pass.*~im', '', $tmp);
+                    // new file name
+                    $file = preg_replace('~.*/~', '', $file) . '-' . rand(100000, 999999);
+                    file_put_contents($file, $tmp);
+                    $m[] = $file;
+                }
+            }
+
+            exec("zip -j --password $g_QuarantinePass $archive $infoFile $report " . DOUBLECHECK_FILE . ' ' . implode(' ', $m));
+            stdOut("\nCreate archive '" . realpath($archive) . "'");
+            stdOut("This archive have password '$g_QuarantinePass'");
+            foreach ($m as $file) unlink($file);
+            unlink($infoFile);
+            return;
+        }
+    }
+
+    $zip = new ZipArchive;
+
+    if ($zip->open($archive, ZIPARCHIVE::CREATE | ZIPARCHIVE::OVERWRITE) === false) {
+        stdOut("Cannot create '$archive'.");
+        return;
+    }
+
+    foreach ($files as $file) {
+        if (in_array($file, $configFiles)) {
+            $tmp = file_get_contents($file);
+            // remove  passwords
+            $tmp = preg_replace('~^.*?pass.*~im', '', $tmp);
+            $zip->addFromString($file, $tmp);
+        } else {
+            $zip->addFile($file);
+        }
+    }
+    $zip->addFile(DOUBLECHECK_FILE, DOUBLECHECK_FILE);
+    $zip->addFile($report, REPORT_FILE);
+    $zip->addFromString($infoFile, $info);
+    $zip->close();
+
+    stdOut("\nCreate archive '" . realpath($archive) . "'.");
+    stdOut("This archive has no password!");
 }
 
-
-
-///////////////////////////////////////////////////////////////////////////
 function QCR_IntegrityCheck($l_RootDir)
 {
-	global $g_Structure, $g_Counter, $g_Doorway, $g_FoundTotalFiles, $g_FoundTotalDirs, 
-			$defaults, $g_SkippedFolders, $g_UrlIgnoreList, $g_DirIgnoreList, $g_UnsafeDirArray, 
-                        $g_UnsafeFilesFound, $g_SymLinks, $g_HiddenFiles, $g_UnixExec, $g_IgnoredExt, $g_SuspiciousFiles;
-	global $g_IntegrityDB, $g_ICheck;
-	static $l_Buffer = '';
-	
-	$l_DirCounter = 0;
-	$l_DoorwayFilesCounter = 0;
-	$l_SourceDirIndex = $g_Counter - 1;
-	
-	QCR_Debug('Check ' . $l_RootDir);
+    global $g_Counter, $g_FoundTotalFiles, $g_FoundTotalDirs, $g_SkippedFolders,
+           $g_DirIgnoreList, $g_SymLinks, $g_UnixExec, $g_IgnoredExt;
+    static $l_Buffer = '';
 
- 	if ($l_DIRH = @opendir($l_RootDir))
-	{
-		while (($l_FileName = readdir($l_DIRH)) !== false)
-		{
-			if ($l_FileName == '.' || $l_FileName == '..') continue;
+    $l_DirCounter = 0;
+//    $l_DoorwayFilesCounter = 0;
+//    $l_SourceDirIndex = $g_Counter - 1;
 
-			$l_FileName = $l_RootDir . DIR_SEPARATOR . $l_FileName;
+    QCR_Debug('Check ' . $l_RootDir);
 
-			$l_Type = filetype($l_FileName);
-			$l_IsDir = ($l_Type == "dir");
-            if ($l_Type == "link") 
-            {
-				$g_SymLinks[] = $l_FileName;
+    if ($l_DIRH = @opendir($l_RootDir)) {
+        while (($l_FileName = readdir($l_DIRH)) !== false) {
+            if ($l_FileName == '.' || $l_FileName == '..') continue;
+
+            $l_FileName = $l_RootDir . DIR_SEPARATOR . $l_FileName;
+
+            $l_Type = filetype($l_FileName);
+            $l_IsDir = ($l_Type == "dir");
+            if ($l_Type == "link") {
+                $g_SymLinks[] = $l_FileName;
                 continue;
-            } else 
-			if ($l_Type != "file" && (!$l_IsDir)) {
-				$g_UnixExec[] = $l_FileName;
-				continue;
-			}	
-						
-			$l_Ext = substr($l_FileName, strrpos($l_FileName, '.') + 1);
+            } else
+                if ($l_Type != "file" && (!$l_IsDir)) {
+                    $g_UnixExec[] = $l_FileName;
+                    continue;
+                }
 
-			$l_NeedToScan = true;
-			$l_Ext2 = substr(strstr(basename($l_FileName), '.'), 1);
-			if (in_array(strtolower($l_Ext2), $g_IgnoredExt)) {
-                           $l_NeedToScan = false;
+//            $l_Ext = substr($l_FileName, strrpos($l_FileName, '.') + 1);
+
+            $l_NeedToScan = true;
+            $l_Ext2 = substr(strstr(basename($l_FileName), '.'), 1);
+            if (in_array(strtolower($l_Ext2), $g_IgnoredExt)) {
+                $l_NeedToScan = false;
             }
-			
-			if (getRelativePath($l_FileName) == "./" . INTEGRITY_DB_FILE) $l_NeedToScan = false;
 
-			if ($l_IsDir)
-			{
-				// if folder in ignore list
-				$l_Skip = false;
-				for ($dr = 0; $dr < count($g_DirIgnoreList); $dr++) {
-					if (($g_DirIgnoreList[$dr] != '') &&
-						preg_match('#' . $g_DirIgnoreList[$dr] . '#', $l_FileName, $l_Found)) {
-						$l_Skip = true;
-					}
-				}
-			
-				// skip on ignore
-				if ($l_Skip) {
-					$g_SkippedFolders[] = $l_FileName;
-					continue;
-				}
-				
-				$l_BaseName = basename($l_FileName);
+            if (getRelativePath($l_FileName) == "./" . INTEGRITY_DB_FILE) $l_NeedToScan = false;
 
-				$l_DirCounter++;
+            if ($l_IsDir) {
+                // if folder in ignore list
+                $l_Skip = false;
+                for ($dr = 0; $dr < count($g_DirIgnoreList); $dr++) {
+                    if (($g_DirIgnoreList[$dr] != '') &&
+                        preg_match('#' . $g_DirIgnoreList[$dr] . '#', $l_FileName, $l_Found)) {
+                        $l_Skip = true;
+                    }
+                }
 
-				$g_Counter++;
-				$g_FoundTotalDirs++;
+                // skip on ignore
+                if ($l_Skip) {
+                    $g_SkippedFolders[] = $l_FileName;
+                    continue;
+                }
 
-				QCR_IntegrityCheck($l_FileName);
+//                $l_BaseName = basename($l_FileName);
 
-			} else
-			{
-				if ($l_NeedToScan)
-				{
-					$g_FoundTotalFiles++;
-					$g_Counter++;
-				}
-			}
-			
-			if (!$l_NeedToScan) continue;
+                $l_DirCounter++;
 
-			if (IMAKE) {
-				write_integrity_db_file($l_FileName);
-				continue;
-			}
+                $g_Counter++;
+                $g_FoundTotalDirs++;
 
-			// ICHECK
-			// skip if known and not modified.
-			if (icheck($l_FileName)) continue;
-			
-			$l_Buffer .= getRelativePath($l_FileName);
-			$l_Buffer .= $l_IsDir ? DIR_SEPARATOR . "\n" : "\n";
+                QCR_IntegrityCheck($l_FileName);
 
-			if (strlen($l_Buffer) > 32000)
-			{
-				file_put_contents(QUEUE_FILENAME, $l_Buffer, FILE_APPEND) or die("Cannot write to file " . QUEUE_FILENAME);
-				$l_Buffer = '';
-			}
+            } else {
+                if ($l_NeedToScan) {
+                    $g_FoundTotalFiles++;
+                    $g_Counter++;
+                }
+            }
 
-		}
+            if (!$l_NeedToScan) continue;
 
-		closedir($l_DIRH);
-	}
-	
-	if (($l_RootDir == ROOT_PATH) && !empty($l_Buffer)) {
-		file_put_contents(QUEUE_FILENAME, $l_Buffer, FILE_APPEND) or die("Cannot write to file ".QUEUE_FILENAME);
-		$l_Buffer = '';
-	}
+            if (IMAKE) {
+                write_integrity_db_file($l_FileName);
+                continue;
+            }
 
-	if (($l_RootDir == ROOT_PATH)) {
-		write_integrity_db_file();
-	}
+            // ICHECK
+            // skip if known and not modified.
+            if (icheck($l_FileName)) continue;
+
+            $l_Buffer .= getRelativePath($l_FileName);
+            $l_Buffer .= $l_IsDir ? DIR_SEPARATOR . "\n" : "\n";
+
+            if (strlen($l_Buffer) > 32000) {
+                file_put_contents(QUEUE_FILENAME, $l_Buffer, FILE_APPEND) or die("Cannot write to file " . QUEUE_FILENAME);
+                $l_Buffer = '';
+            }
+        }
+        closedir($l_DIRH);
+    }
+
+    if (($l_RootDir == ROOT_PATH) && !empty($l_Buffer)) {
+        file_put_contents(QUEUE_FILENAME, $l_Buffer, FILE_APPEND) or die("Cannot write to file " . QUEUE_FILENAME);
+        $l_Buffer = '';
+    }
+
+    if (($l_RootDir == ROOT_PATH)) {
+        write_integrity_db_file();
+    }
 
 }
 
-
-function getRelativePath($l_FileName) {
-	return "./" . substr($l_FileName, strlen(ROOT_PATH) + 1) . (is_dir($l_FileName) ? DIR_SEPARATOR : '');
+function getRelativePath($l_FileName): string {
+    return "./" . substr($l_FileName, strlen(ROOT_PATH) + 1) . (is_dir($l_FileName) ? DIR_SEPARATOR : '');
 }
+
 /**
  *
  * @return true if known and not modified
  */
-function icheck($l_FileName) {
-	global $g_IntegrityDB, $g_ICheck;
-	static $l_Buffer = '';
-	static $l_status = array( 'modified' => 'modified', 'added' => 'added' );
-    
-	$l_RelativePath = getRelativePath($l_FileName);
-	$l_known = isset($g_IntegrityDB[$l_RelativePath]);
+function icheck($l_FileName): bool {
+    global $g_IntegrityDB;
+//    static $l_Buffer = '';
+    static $l_status = array('modified' => 'modified', 'added' => 'added');
 
-	if (is_dir($l_FileName)) {
-		if ( $l_known ) {
-			unset($g_IntegrityDB[$l_RelativePath]);
-		} else {
-			$g_IntegrityDB[$l_RelativePath] =& $l_status['added'];
-		}
-		return $l_known;
-	}
+    $l_RelativePath = getRelativePath($l_FileName);
+    $l_known = isset($g_IntegrityDB[$l_RelativePath]);
 
-	if ($l_known == false) {
-		$g_IntegrityDB[$l_RelativePath] =& $l_status['added'];
-		return false;
-	}
+    if (is_dir($l_FileName)) {
+        if ($l_known) {
+            unset($g_IntegrityDB[$l_RelativePath]);
+        } else {
+            $g_IntegrityDB[$l_RelativePath] =& $l_status['added'];
+        }
+        return $l_known;
+    }
 
-	$hash = is_file($l_FileName) ? hash_file('sha1', $l_FileName) : '';
-	
-	if ($g_IntegrityDB[$l_RelativePath] != $hash) {
-		$g_IntegrityDB[$l_RelativePath] =& $l_status['modified'];
-		return false;
-	}
+    if ($l_known == false) {
+        $g_IntegrityDB[$l_RelativePath] =& $l_status['added'];
+        return false;
+    }
 
-	unset($g_IntegrityDB[$l_RelativePath]);
-	return true;
+    $hash = is_file($l_FileName) ? hash_file('sha1', $l_FileName) : '';
+
+    if ($g_IntegrityDB[$l_RelativePath] != $hash) {
+        $g_IntegrityDB[$l_RelativePath] =& $l_status['modified'];
+        return false;
+    }
+
+    unset($g_IntegrityDB[$l_RelativePath]);
+    return true;
 }
 
 function write_integrity_db_file($l_FileName = '') {
-	static $l_Buffer = '';
+    static $l_Buffer = '';
 
-	if (empty($l_FileName)) {
-		empty($l_Buffer) or file_put_contents('compress.zlib://' . INTEGRITY_DB_FILE, $l_Buffer, FILE_APPEND) or die("Cannot write to file " . INTEGRITY_DB_FILE);
-		$l_Buffer = '';
-		return;
-	}
+    if (empty($l_FileName)) {
+        empty($l_Buffer) or file_put_contents('compress.zlib://' . INTEGRITY_DB_FILE, $l_Buffer, FILE_APPEND) or die("Cannot write to file " . INTEGRITY_DB_FILE);
+        $l_Buffer = '';
+        return;
+    }
 
-	$l_RelativePath = getRelativePath($l_FileName);
-		
-	$hash = is_file($l_FileName) ? hash_file('sha1', $l_FileName) : '';
+    $l_RelativePath = getRelativePath($l_FileName);
 
-	$l_Buffer .= "$l_RelativePath|$hash\n";
-	
-	if (strlen($l_Buffer) > 32000)
-	{
-		file_put_contents('compress.zlib://' . INTEGRITY_DB_FILE, $l_Buffer, FILE_APPEND) or die("Cannot write to file " . INTEGRITY_DB_FILE);
-		$l_Buffer = '';
-	}
+    $hash = is_file($l_FileName) ? hash_file('sha1', $l_FileName) : '';
+
+    $l_Buffer .= "$l_RelativePath|$hash\n";
+
+    if (strlen($l_Buffer) > 32000) {
+        file_put_contents('compress.zlib://' . INTEGRITY_DB_FILE, $l_Buffer, FILE_APPEND) or die("Cannot write to file " . INTEGRITY_DB_FILE);
+        $l_Buffer = '';
+    }
 }
 
 function load_integrity_db() {
-	global $g_IntegrityDB;
-	file_exists(INTEGRITY_DB_FILE) or die('Not found ' . INTEGRITY_DB_FILE);
+    global $g_IntegrityDB;
+    file_exists(INTEGRITY_DB_FILE) or die('Not found ' . INTEGRITY_DB_FILE);
 
-	$s_file = new SplFileObject('compress.zlib://'.INTEGRITY_DB_FILE);
-	$s_file->setFlags(SplFileObject::READ_AHEAD | SplFileObject::SKIP_EMPTY | SplFileObject::DROP_NEW_LINE);
+    $s_file = new SplFileObject('compress.zlib://' . INTEGRITY_DB_FILE);
+    $s_file->setFlags(SplFileObject::READ_AHEAD | SplFileObject::SKIP_EMPTY | SplFileObject::DROP_NEW_LINE);
 
-	foreach ($s_file as $line) {
-		$i = strrpos($line, '|');
-		if (!$i) continue;
-		$g_IntegrityDB[substr($line, 0, $i)] = substr($line, $i+1);
-	}
+    foreach ($s_file as $line) {
+        $i = strrpos($line, '|');
+        if (!$i) continue;
+        $g_IntegrityDB[substr($line, 0, $i)] = substr($line, $i + 1);
+    }
 
-	$s_file = null;
+    $s_file = null;
 }
 
+function OptimizeSignatures() {
+    global $g_FlexDBShe, $gX_FlexDBShe, $gXX_FlexDBShe;
+    global $g_JSVirSig, $gX_JSVirSig;
+    global $g_AdwareSig;
+    global $g_PhishingSig;
+    global $g_ExceptFlex, $g_SusDB;
 
-function OptimizeSignatures()
-{
-	global $g_DBShe, $g_FlexDBShe, $gX_FlexDBShe, $gXX_FlexDBShe;
-	global $g_JSVirSig, $gX_JSVirSig;
-	global $g_AdwareSig;
-	global $g_PhishingSig;
-	global $g_ExceptFlex, $g_SusDBPrio, $g_SusDB;
+    (AI_EXPERT == 2) && ($g_FlexDBShe = array_merge($g_FlexDBShe, $gX_FlexDBShe, $gXX_FlexDBShe));
+    (AI_EXPERT == 1) && ($g_FlexDBShe = array_merge($g_FlexDBShe, $gX_FlexDBShe));
+    $gX_FlexDBShe = $gXX_FlexDBShe = array();
 
-	(AI_EXPERT == 2) && ($g_FlexDBShe = array_merge($g_FlexDBShe, $gX_FlexDBShe, $gXX_FlexDBShe));
-	(AI_EXPERT == 1) && ($g_FlexDBShe = array_merge($g_FlexDBShe, $gX_FlexDBShe));
-	$gX_FlexDBShe = $gXX_FlexDBShe = array();
+    (AI_EXPERT == 2) && ($g_JSVirSig = array_merge($g_JSVirSig, $gX_JSVirSig));
+    $gX_JSVirSig = array();
 
-	(AI_EXPERT == 2) && ($g_JSVirSig = array_merge($g_JSVirSig, $gX_JSVirSig));
-	$gX_JSVirSig = array();
+    $count = count($g_FlexDBShe);
 
-	$count = count($g_FlexDBShe);
+    for ($i = 0; $i < $count; $i++) {
+        if ($g_FlexDBShe[$i] == '[a-zA-Z0-9_]+?\(\s*[a-zA-Z0-9_]+?=\s*\)') $g_FlexDBShe[$i] = '\((?<=[a-zA-Z0-9_].)\s*[a-zA-Z0-9_]++=\s*\)';
+        if ($g_FlexDBShe[$i] == '([^\?\s])\({0,1}\.[\+\*]\){0,1}\2[a-z]*e') $g_FlexDBShe[$i] = '(?J)\.[+*](?<=(?<d>[^\?\s])\(..|(?<d>[^\?\s])..)\)?\g{d}[a-z]*e';
+        if ($g_FlexDBShe[$i] == '$[a-zA-Z0-9_]\{\d+\}\s*\.$[a-zA-Z0-9_]\{\d+\}\s*\.$[a-zA-Z0-9_]\{\d+\}\s*\.') $g_FlexDBShe[$i] = '\$[a-zA-Z0-9_]\{\d+\}\s*\.\$[a-zA-Z0-9_]\{\d+\}\s*\.\$[a-zA-Z0-9_]\{\d+\}\s*\.';
 
-	for ($i = 0; $i < $count; $i++) {
-		if ($g_FlexDBShe[$i] == '[a-zA-Z0-9_]+?\(\s*[a-zA-Z0-9_]+?=\s*\)') $g_FlexDBShe[$i] = '\((?<=[a-zA-Z0-9_].)\s*[a-zA-Z0-9_]++=\s*\)';
-		if ($g_FlexDBShe[$i] == '([^\?\s])\({0,1}\.[\+\*]\){0,1}\2[a-z]*e') $g_FlexDBShe[$i] = '(?J)\.[+*](?<=(?<d>[^\?\s])\(..|(?<d>[^\?\s])..)\)?\g{d}[a-z]*e';
-		if ($g_FlexDBShe[$i] == '$[a-zA-Z0-9_]\{\d+\}\s*\.$[a-zA-Z0-9_]\{\d+\}\s*\.$[a-zA-Z0-9_]\{\d+\}\s*\.') $g_FlexDBShe[$i] = '\$[a-zA-Z0-9_]\{\d+\}\s*\.\$[a-zA-Z0-9_]\{\d+\}\s*\.\$[a-zA-Z0-9_]\{\d+\}\s*\.';
+        $g_FlexDBShe[$i] = str_replace('http://.+?/.+?\.php\?a', 'http://[^?\s]++(?<=\.php)\?a', $g_FlexDBShe[$i]);
+        $g_FlexDBShe[$i] = preg_replace('~\[a-zA-Z0-9_]\+\K\?~', '+', $g_FlexDBShe[$i]);
+        $g_FlexDBShe[$i] = preg_replace('~^\\\\[d]\+&@~', '&@(?<=\d..)', $g_FlexDBShe[$i]);
+        $g_FlexDBShe[$i] = str_replace('\s*[\'"]{0,1}.+?[\'"]{0,1}\s*', '.+?', $g_FlexDBShe[$i]);
+        $g_FlexDBShe[$i] = str_replace('[\'"]{0,1}.+?[\'"]{0,1}', '.+?', $g_FlexDBShe[$i]);
 
-		$g_FlexDBShe[$i] = str_replace('http://.+?/.+?\.php\?a', 'http://[^?\s]++(?<=\.php)\?a', $g_FlexDBShe[$i]);
-		$g_FlexDBShe[$i] = preg_replace('~\[a-zA-Z0-9_\]\+\K\?~', '+', $g_FlexDBShe[$i]);
-		$g_FlexDBShe[$i] = preg_replace('~^\\\\[d]\+&@~', '&@(?<=\d..)', $g_FlexDBShe[$i]);
-		$g_FlexDBShe[$i] = str_replace('\s*[\'"]{0,1}.+?[\'"]{0,1}\s*', '.+?', $g_FlexDBShe[$i]);
-		$g_FlexDBShe[$i] = str_replace('[\'"]{0,1}.+?[\'"]{0,1}', '.+?', $g_FlexDBShe[$i]);
+        $g_FlexDBShe[$i] = preg_replace('~^\[\'"]\{0,1}\.?|^@\*|^\\\\s\*~', '', $g_FlexDBShe[$i]);
+        $g_FlexDBShe[$i] = preg_replace('~^\[\'"]\{0,1}\.?|^@\*|^\\\\s\*~', '', $g_FlexDBShe[$i]);
+    }
 
-		$g_FlexDBShe[$i] = preg_replace('~^\[\'"\]\{0,1\}\.?|^@\*|^\\\\s\*~', '', $g_FlexDBShe[$i]);
-		$g_FlexDBShe[$i] = preg_replace('~^\[\'"\]\{0,1\}\.?|^@\*|^\\\\s\*~', '', $g_FlexDBShe[$i]);
-	}
+    optSig($g_FlexDBShe);
+    optSig($g_JSVirSig);
+    optSig($g_AdwareSig);
+    optSig($g_PhishingSig);
+    optSig($g_SusDB);
+    //optSig($g_SusDBPrio);
+    //optSig($g_ExceptFlex);
 
-	optSig($g_FlexDBShe);
-	optSig($g_JSVirSig);
-	optSig($g_AdwareSig);
-	optSig($g_PhishingSig);
-        optSig($g_SusDB);
-        //optSig($g_SusDBPrio);
-        //optSig($g_ExceptFlex);
+    // convert exception rules
+    $cnt = count($g_ExceptFlex);
+    for ($i = 0; $i < $cnt; $i++) {
+        $g_ExceptFlex[$i] = trim(UnwrapObfu($g_ExceptFlex[$i]));
+        if (!strlen($g_ExceptFlex[$i])) unset($g_ExceptFlex[$i]);
+    }
 
-        // convert exception rules
-        $cnt = count($g_ExceptFlex);
-        for ($i = 0; $i < $cnt; $i++) {                		
-            $g_ExceptFlex[$i] = trim(UnwrapObfu($g_ExceptFlex[$i]));
-            if (!strlen($g_ExceptFlex[$i])) unset($g_ExceptFlex[$i]);
+    $g_ExceptFlex = array_values($g_ExceptFlex);
+}
+
+function optSig(&$sigs) {
+    $sigs = array_unique($sigs);
+
+    // Add SigId
+    foreach ($sigs as &$s) {
+        $s .= '(?<X' . myCheckSum($s) . '>)';
+    }
+    unset($s);
+
+    $fix = array(
+        '([^\?\s])\({0,1}\.[\+\*]\){0,1}\2[a-z]*e' => '(?J)\.[+*](?<=(?<d>[^\?\s])\(..|(?<d>[^\?\s])..)\)?\g{d}[a-z]*e',
+        'http://.+?/.+?\.php\?a' => 'http://[^?\s]++(?<=\.php)\?a',
+        '\s*[\'"]{0,1}.+?[\'"]{0,1}\s*' => '.+?',
+        '[\'"]{0,1}.+?[\'"]{0,1}' => '.+?'
+    );
+    $sigs = str_replace(array_keys($fix), array_values($fix), $sigs);
+
+    $fix = array(
+        '~^\\\\[d]\+&@~' => '&@(?<=\d..)',
+        '~^((\[\'"\]|\\\\s|@)(\{0,1\}\.?|[?*]))+~' => ''
+    );
+    $sigs = preg_replace(array_keys($fix), array_values($fix), $sigs);
+
+    optSigCheck($sigs);
+
+    $tmp = array();
+    foreach ($sigs as $i => $s) {
+        if (strpos($s, '.+') !== false || strpos($s, '.*') !== false) {
+            unset($sigs[$i]);
+            $tmp[] = $s;
         }
+    }
 
-        $g_ExceptFlex = array_values($g_ExceptFlex);
+    usort($sigs, 'strcasecmp');
+    $txt = implode("\n", $sigs);
+
+    for ($i = 24; $i >= 1; ($i > 4) ? $i -= 4 : --$i) {
+        $txt = preg_replace_callback('#^((?>(?:\\\\.|\\[.+?]|[^(\n]|\((?:\\\\.|[^)(\n])++\))(?:[*?+]\+?|)){' . $i . ',}).*(?:\\n\\1(?![{?*+]).+)+#im', 'optMergePrefixes', $txt);
+    }
+
+    $sigs = array_merge(explode("\n", $txt), $tmp);
+
+    optSigCheck($sigs);
 }
 
+function optMergePrefixes($m): string {
+    $prefix = $m[1];
+    $prefix_len = strlen($prefix);
 
-function optSig(&$sigs)
-{
-	$sigs = array_unique($sigs);
+    $suffixes = array();
+    foreach (explode("\n", $m[0]) as $line) {
+        $suffixes[] = substr($line, $prefix_len);
+    }
 
-	// Add SigId
-	foreach ($sigs as &$s) {
-		$s .= '(?<X' . myCheckSum($s) . '>)';
-	}
-	unset($s);
-	
-	$fix = array(
-		'([^\?\s])\({0,1}\.[\+\*]\){0,1}\2[a-z]*e' => '(?J)\.[+*](?<=(?<d>[^\?\s])\(..|(?<d>[^\?\s])..)\)?\g{d}[a-z]*e',
-		'http://.+?/.+?\.php\?a' => 'http://[^?\s]++(?<=\.php)\?a',
-		'\s*[\'"]{0,1}.+?[\'"]{0,1}\s*' => '.+?',
-		'[\'"]{0,1}.+?[\'"]{0,1}' => '.+?'
-	);
-	$sigs = str_replace(array_keys($fix), array_values($fix), $sigs);
-	
-	$fix = array(
-		'~^\\\\[d]\+&@~' => '&@(?<=\d..)',
-		'~^((\[\'"\]|\\\\s|@)(\{0,1\}\.?|[?*]))+~' => ''
-	);
-	$sigs = preg_replace(array_keys($fix), array_values($fix), $sigs);
-
-	optSigCheck($sigs);
-
-	$tmp = array();
-	foreach ($sigs as $i => $s) {
-		if (strpos($s, '.+') !== false || strpos($s, '.*') !== false) {
-			unset($sigs[$i]);
-			$tmp[] = $s;
-		}
-	}
-	
-	usort($sigs, 'strcasecmp');
-	$txt = implode("\n", $sigs);
-
-	for ($i = 24; $i >= 1; ($i > 4 ) ? $i -= 4 : --$i) {
-		$txt = preg_replace_callback('#^((?>(?:\\\\.|\\[.+?\\]|[^(\n]|\((?:\\\\.|[^)(\n])++\))(?:[*?+]\+?|)){' . $i . ',}).*(?:\\n\\1(?![{?*+]).+)+#im', 'optMergePrefixes', $txt);
-	}
-
-	$sigs = array_merge(explode("\n", $txt), $tmp);
-	
-	optSigCheck($sigs);
-}
-
-function optMergePrefixes($m)
-{
-	$prefix = $m[1];
-	$prefix_len = strlen($prefix);
-
-	$suffixes = array();
-	foreach (explode("\n", $m[0]) as $line) {
-		$suffixes[] = substr($line, $prefix_len);
-	}
-	
-	return $prefix . '(?:' . implode('|', $suffixes) . ')';
+    return $prefix . '(?:' . implode('|', $suffixes) . ')';
 }
 
 /*
  * Checking errors in pattern
  */
-function optSigCheck(&$sigs)
-{
-	$result = true;
+function optSigCheck(&$sigs): bool {
+    $result = true;
 
-	foreach ($sigs as $k => $sig) {
-		if (@preg_match('#(' . $sig . ')#smiS', '') === false) {
-			$error = error_get_last();
-			//echo($error['message'] . "\n     pattern: " . $sig . "\n");
-			unset($sigs[$k]);
-			$result = false;
-		}
-	}
-	
-	return $result;
+    foreach ($sigs as $k => $sig) {
+        if (@preg_match('#(' . $sig . ')#smiS', '') === false) {
+//            $error = error_get_last();
+//            echo($error['message'] . "\n     pattern: " . $sig . "\n");
+            unset($sigs[$k]);
+            $result = false;
+        }
+    }
+
+    return $result;
 }
 
+function _hash_($text): string {
+    static $r;
 
-function _hash_($text)
-{
-	static $r;
-	
-	if (empty($r)) {
-		for ($i = 0; $i < 256; $i++) {
-			if ($i < 33 OR $i > 127 ) $r[chr($i)] = '';
-		}
-	}
+    if (empty($r)) {
+        for ($i = 0; $i < 256; $i++) {
+            if ($i < 33 or $i > 127) $r[chr($i)] = '';
+        }
+    }
 
-	return sha1(strtr($text, $r));
+    return sha1(strtr($text, $r));
 }
 
-function check_whitelist($list, &$snum) 
-{
-	if (empty($list)) return array();
-	
-	$file = dirname(__FILE__) . '/AIBOLIT-WHITELIST.db';
+function check_whitelist($list, &$snum): array {
+    if (empty($list)) return array();
 
-	$snum = max(0, @filesize($file) - 1024) / 20;
-	echo "\nLoaded " . ceil($snum) . " known files\n";
-	
-	sort($list);
+    $file = dirname(__FILE__) . '/AIBOLIT-WHITELIST.db';
 
-	$hash = reset($list);
-	
-	$fp = @fopen($file, 'rb');
-	
-	if (false === $fp) return array();
-	
-	$header = unpack('V256', fread($fp, 1024));
-	
-	$result = array();
-	
-	foreach ($header as $chunk_id => $chunk_size) {
-		if ($chunk_size > 0) {
-			$str = fread($fp, $chunk_size);
-			
-			do {
-				$raw = pack("H*", $hash);
-				$id = ord($raw[0]) + 1;
-				
-				if ($chunk_id == $id AND binarySearch($str, $raw)) {
-					$result[] = $hash;
-				}
-				
-			} while ($chunk_id >= $id AND $hash = next($list));
-			
-			if ($hash === false) break;
-		}
-	}
-	
-	fclose($fp);
+    $snum = max(0, @filesize($file) - 1024) / 20;
+    echo "\nLoaded " . ceil($snum) . " known files\n";
 
-	return $result;
+    sort($list);
+
+    $hash = reset($list);
+
+    $fp = @fopen($file, 'rb');
+
+    if (false === $fp) return array();
+
+    $header = unpack('V256', fread($fp, 1024));
+
+    $result = array();
+
+    foreach ($header as $chunk_id => $chunk_size) {
+        if ($chunk_size > 0) {
+            $str = fread($fp, $chunk_size);
+
+            do {
+                $raw = pack("H*", $hash);
+                $id = ord($raw[0]) + 1;
+
+                if ($chunk_id == $id and binarySearch($str, $raw)) {
+                    $result[] = $hash;
+                }
+
+            } while ($chunk_id >= $id and $hash = next($list));
+
+            if ($hash === false) break;
+        }
+    }
+
+    fclose($fp);
+
+    return $result;
 }
 
+function binarySearch($str, $item): bool {
+    $item_size = strlen($item);
 
-function binarySearch($str, $item)
-{
-	$item_size = strlen($item);
-	
-	if ( $item_size == 0 ) return false;
-	
-	$first = 0;
+    if ($item_size == 0) return false;
 
-	$last = floor(strlen($str) / $item_size);
-	
-	while ($first < $last) {
-		$mid = $first + (($last - $first) >> 1);
-		$b = substr($str, $mid * $item_size, $item_size);
-		if (strcmp($item, $b) <= 0)
-			$last = $mid;
-		else
-			$first = $mid + 1;
-	}
+    $first = 0;
 
-	$b = substr($str, $last * $item_size, $item_size);
-	if ($b == $item) {
-		return true;
-	} else {
-		return false;
-	}
+    $last = floor(strlen($str) / $item_size);
+
+    while ($first < $last) {
+        $mid = $first + (($last - $first) >> 1);
+        $b = substr($str, $mid * $item_size, $item_size);
+        if (strcmp($item, $b) <= 0)
+            $last = $mid;
+        else
+            $first = $mid + 1;
+    }
+
+    $b = substr($str, $last * $item_size, $item_size);
+    if ($b == $item) {
+        return true;
+    } else {
+        return false;
+    }
 }
 
 function getSigId($l_Found)
 {
-	foreach ($l_Found as $key => &$v) {
-		if (is_string($key) AND $v[1] != -1 AND strlen($key) == 9) {
-			return substr($key, 1);
-		}
-	}
-	
-	return null;
+    foreach ($l_Found as $key => $v) {
+        if (is_string($key) and $v[1] != -1 and strlen($key) == 9) {
+            return substr($key, 1);
+        }
+    }
+
+    return null;
 }
